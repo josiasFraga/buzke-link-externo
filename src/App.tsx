@@ -49,11 +49,12 @@ function App() {
           phone: data.telefone,
           whatsapp: data.wp,
           address: {
+            pais: data.pais,
             street: data.endereco,
             number: data.endereco_n,
             neighborhood: data.bairro,
-            city: data.cidadeBr.loc_no,
-            state: data.cidadeBr.ufe_sg
+            city: data.cidadeBr?.loc_no || data.cidadeUi.nome,
+            state: data.cidadeBr?.ufe_sg || data.estadoUi.nome
           },
           businessHours: data.horarios_atendimento.map(horario => ({
             day: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][horario.horario_dia_semana],

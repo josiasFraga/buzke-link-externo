@@ -1,6 +1,9 @@
 import React from 'react';
 import { Service, Appointment } from '../types';
-import { Calendar, Clock, User, Mail, CheckCircle, Download, Smartphone } from 'lucide-react';
+import { Calendar, Clock, User, Mail, CheckCircle, Download, Smartphone, Home } from 'lucide-react';
+import moment from '../utils/moment-pt-br';
+import { useCompanyStore } from '../store/companyStore';
+
 
 interface BookingConfirmationProps {
   appointment: Appointment;
@@ -13,25 +16,22 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   service,
   onClose
 }) => {
+
+  const { company } = useCompanyStore();
+
   // Format date for display
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return new Date(dateString).toLocaleDateString('pt-BR', options);
+    return moment(dateString).format('dddd, DD [de] MMMM [de] YYYY');
   };
 
   const handleAddToCalendar = () => {
-    const startDate = new Date(appointment.date);
-    const [hours, minutes] = appointment.timeSlot.split(':');
-    startDate.setHours(parseInt(hours), parseInt(minutes));
+    // Crie a data no formato ISO local (sem fuso UTC)
+    const dateTimeString = `${appointment.date}T${appointment.timeSlot}`;
+    const startDate = new Date(dateTimeString);
 
-    // Calculate end time based on service duration
+    // Calcular o horário final baseado na duração do serviço
     const endDate = new Date(startDate);
-    const durationMatch = service.duration.match(/(\d+)h\s*(\d+)?min|(\d+)min/);
+    const durationMatch = service.duration.match(/(\d+)h|(\d+)h\s*(\d+)?min|(\d+)min/);
     if (durationMatch) {
       const hours = parseInt(durationMatch[1] || '0');
       const minutes = parseInt(durationMatch[2] || durationMatch[3] || '0');
@@ -39,24 +39,28 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
       endDate.setMinutes(endDate.getMinutes() + minutes);
     }
 
-    // Create calendar event details
+    const businessLocation = company && company.address
+      ? `${company.address.street}, ${company.address.number}, ${company.address.neighborhood}, ${company.address.city} - ${company.address.state}`
+      : '';
+
     const eventDetails = {
-      title: service.name,
+      title: `${company?.name} ${service.name}`,
       description: `Agendamento com ${appointment.customerName}\n${service.description}`,
-      location: appointment.isAtHome ? appointment.address : '',
+      location: appointment.isAtHome ? appointment.address : businessLocation,
       startTime: startDate.toISOString(),
       endTime: endDate.toISOString()
     };
 
-    // Generate calendar URLs
     const googleUrl = new URL('https://calendar.google.com/calendar/render');
     googleUrl.searchParams.append('action', 'TEMPLATE');
     googleUrl.searchParams.append('text', eventDetails.title);
     googleUrl.searchParams.append('details', eventDetails.description);
-    googleUrl.searchParams.append('location', eventDetails.location);
-    googleUrl.searchParams.append('dates', `${eventDetails.startTime.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}/${eventDetails.endTime.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`);
+    googleUrl.searchParams.append('location', eventDetails.location || '');
+    googleUrl.searchParams.append(
+      'dates',
+      `${eventDetails.startTime.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}/${eventDetails.endTime.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`
+    );
 
-    // Open calendar in new tab
     window.open(googleUrl.toString(), '_blank');
   };
 
@@ -102,10 +106,10 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
             </div>
           )}
           
-          <div className="flex items-center">
+          {appointment.customerName && <div className="flex items-center">
             <User size={18} className="text-indigo-600 mr-3 flex-shrink-0" />
             <span className="text-gray-700 font-medium">{appointment.customerName}</span>
-          </div>
+          </div>}
           
           <div className="flex items-center">
             <Mail size={18} className="text-indigo-600 mr-3 flex-shrink-0" />

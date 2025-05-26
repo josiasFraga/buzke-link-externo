@@ -6,6 +6,7 @@ import RegisterForm from './Forms/RegisterForm';
 import RecurringOptions from './Forms/RecurringOptions';
 import HomeServiceOptions from './Forms/HomeServiceOptions';
 import PetForm from './Forms/PetForm';
+import moment from '../utils/moment-pt-br';
 
 interface CustomerFormProps {
   onSubmit: (
@@ -302,11 +303,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           <div>
             <h4 className="font-bold text-gray-800">{selectedService.name}</h4>
             <p className="text-sm text-gray-600 mt-1">
-              {new Date(selectedDate).toLocaleDateString('pt-BR', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {moment(selectedDate).format('dddd, DD [de] MMMM [de] YYYY')}
               {' às '}
               {selectedTimeSlot.time}
             </p>

@@ -7,6 +7,7 @@ export interface Company {
   phone?: string;
   whatsapp?: string;
   address?: {
+    pais: string;
     street: string;
     number: string;
     neighborhood: string;
