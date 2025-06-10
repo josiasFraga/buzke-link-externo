@@ -30,7 +30,7 @@ const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderPro
       return (
         <button 
           onClick={onOpenReviews}
-          className="flex items-center bg-white/10 backdrop-blur-sm hover:bg-white/20 px-3 py-2 rounded-full transition-colors text-white text-sm"
+          className="flex items-center justify-center bg-white/10 backdrop-blur-sm hover:bg-white/20 px-3 py-2 rounded-full transition-colors text-white text-sm"
         >
           <Star size={16} className="mr-1 sm:mr-2" />
           <span className="hidden sm:inline">Sem avaliações</span>
@@ -42,7 +42,7 @@ const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderPro
     return (
       <button 
         onClick={onOpenReviews}
-        className="flex items-center bg-white/10 backdrop-blur-sm hover:bg-white/20 px-3 py-2 rounded-full transition-colors text-white text-sm"
+        className="flex items-center justify-center bg-white/10 backdrop-blur-sm hover:bg-white/20 px-3 py-2 rounded-full transition-colors text-white text-sm"
       >
         <Star size={16} className="mr-1 sm:mr-2" />
         <span className="hidden sm:inline">{company.media_avaliacoes} ({company.total_avaliacoes} avaliações)</span>
@@ -83,7 +83,7 @@ const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderPro
         <div className="container mx-auto px-4 h-full flex flex-col justify-center sm:justify-end pb-8 sm:pb-12 relative z-10">
           <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-6 sm:gap-8">
             <div className="relative">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
+              <div className="w-36 h-36 sm:w-32 sm:h-32 md:w-26 md:h-26 lg:w-26 lg:h-26 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
                 <img 
                   src={company.logo} 
                   alt={company.name} 
