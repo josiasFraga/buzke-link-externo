@@ -128,7 +128,7 @@ const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderPro
                 >
                   <Clock size={16} className="mr-1 sm:mr-2 flex-shrink-0" />
                   <span className="hidden sm:inline">Aberto {getCurrentBusinessHours()}</span>
-                  <span className="sm:hidden">Horários</span>
+                  <span className="sm:hidden">Horários de Atendimento</span>
                 </button>
                 
                 {renderRatingButton()}
@@ -142,6 +142,21 @@ const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderPro
                   <span className="sm:hidden">Ligar</span>
                 </button>
               </div>
+
+              <div className="sm:hidden absolute bottom-14 left-1/2 transform -translate-x-1/2 z-20">
+                <button 
+                  onClick={() => {
+                    document.getElementById('section-services')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="cursor-pointer flex flex-col items-center text-white text-sm font-medium bg-white/10 backdrop-blur-md hover:bg-white/20 px-4 py-2 rounded-full shadow-md transition-all"
+                >
+                  <span>Agendar Agora</span>
+                  <svg className="w-4 h-4 mt-1 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
