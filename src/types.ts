@@ -93,9 +93,33 @@ export interface PetType {
 }
 
 export interface Pet {
+  id: number;
   nome: string;
-  sexo: 'F' | 'M';
-  pet_tipo_id: number;
+  sexo: 'M' | 'F';
+  raca: string | null;
+  foto: string;
+  cliente_cliente_id: number;
+  tipo: {
+    id: number;
+    nome: string;
+  };
+}
+
+export interface User {
+  id: number;
+  nome: string;
+  email: string;
+  usuario: string;
+  img: string;
+  telefone: string | null;
+  telefone_ddi: string;
+  pais: string;
+  cliente_id: number | null;
+  cliente?: {
+    id: number;
+    sexo: 'M' | 'F';
+    data_nascimento: string;
+  }[];
 }
 
 export interface Appointment {
@@ -111,11 +135,29 @@ export interface Appointment {
   address?: string;
   professionalId?: number;
   sportId?: number;
-  pet?: Pet;
+  pet_id?: number;
+  vouchersIds?: number[];
 }
 
 export interface BookingStep {
   id: number;
   title: string;
   description: string;
+}
+
+export interface Voucher {
+  id: number;
+  created: string;
+  modified: string;
+  deleted_at: string | null;
+  validade_inicio: string;
+  validade_fim: string;
+  codigo: string;
+  limite_uso: number;
+  ativo: boolean;
+  tipo_desconto: 'P' | 'V';
+  valor_desconto: string | null;
+  porcentagem_desconto: string | null;
+  apenas_agendamentos_novos: boolean;
+  descricao: string;
 }

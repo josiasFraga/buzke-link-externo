@@ -1,6 +1,6 @@
 import React from 'react';
-import { Service, Appointment } from '../types';
-import { Calendar, Clock, User, Mail, CheckCircle, Download, Smartphone, Home } from 'lucide-react';
+import { Service, Appointment, Voucher } from '../types';
+import { Calendar, Clock, User, Mail, CheckCircle, Download, Smartphone, Home, Tag } from 'lucide-react';
 import moment from '../utils/moment-pt-br';
 import { useCompanyStore } from '../store/companyStore';
 
@@ -8,12 +8,14 @@ import { useCompanyStore } from '../store/companyStore';
 interface BookingConfirmationProps {
   appointment: Appointment;
   service: Service;
+  appliedVoucher: Voucher | null;
   onClose: () => void;
 }
 
-const BookingConfirmation: React.FC<BookingConfirmationProps> = ({ 
-  appointment, 
+const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
+  appointment,
   service,
+  appliedVoucher,
   onClose
 }) => {
 
@@ -63,6 +65,19 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 
     window.open(googleUrl.toString(), '_blank');
   };
+
+  const calculateDiscountedPrice = (price: number, voucher: Voucher | null) => {
+    if (!voucher) return price;
+    if (voucher.tipo_desconto === 'P' && voucher.porcentagem_desconto) {
+      return price - price * (parseFloat(voucher.porcentagem_desconto) / 100);
+    }
+    if (voucher.tipo_desconto === 'V' && voucher.valor_desconto) {
+      return price - parseFloat(voucher.valor_desconto);
+    }
+    return price;
+  };
+
+  const finalPrice = calculateDiscountedPrice(service.price, appliedVoucher);
 
   return (
     <div className="text-center">
@@ -115,10 +130,34 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
             <Mail size={18} className="text-indigo-600 mr-3 flex-shrink-0" />
             <span className="text-gray-700">{appointment.customerEmail}</span>
           </div>
+
+          {appliedVoucher && (
+            <div className="flex items-center pt-3 mt-3 border-t border-indigo-100">
+              <Tag size={18} className="text-green-600 mr-3 flex-shrink-0" />
+              <div>
+                <p className="text-green-700 font-medium">Cupom Aplicado: {appliedVoucher.codigo}</p>
+                <p className="text-sm text-green-600">{appliedVoucher.descricao}</p>
+              </div>
+            </div>
+          )}
         </div>
         
+        <div className="mt-6 pt-4 border-t border-indigo-200">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-medium text-gray-700">Total:</span>
+              {appliedVoucher ? (
+                <div className="text-right">
+                  <p className="text-gray-500 line-through">R$ {service.price.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-green-600">R$ {finalPrice.toFixed(2)}</p>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-indigo-600">R$ {service.price.toFixed(2)}</p>
+              )}
+            </div>
+          </div>
+
         <div className="mt-6 pt-6 border-t border-indigo-100">
-          <button 
+          <button
             onClick={handleAddToCalendar}
             className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium text-sm"
           >

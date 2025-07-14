@@ -11,6 +11,7 @@ export const companies: Record<string, Company> = {
     phone: '(53) 99711-2186',
     whatsapp: '(53) 99711-2186',
     address: {
+      pais: 'Brasil',
       street: 'Angelo Trindade',
       number: '1773',
       neighborhood: 'Humaita',
@@ -41,9 +42,10 @@ export const services: Record<string, Service[]> = {
   'mdbeautystudio': [
     {
       id: 'service-1',
+      companyId: '73',
       name: 'Maquiagem Profissional',
       description: 'Maquiagem completa para eventos especiais',
-      duration: 60,
+      duration: '60min',
       price: 150,
       rating: 4.8,
       reviewCount: 124,
@@ -54,9 +56,10 @@ export const services: Record<string, Service[]> = {
     },
     {
       id: 'service-2',
+      companyId: '73',
       name: 'Design de Sobrancelhas',
       description: 'Design profissional com henna',
-      duration: 45,
+      duration: '45min',
       price: 80,
       rating: 4.9,
       reviewCount: 156,
@@ -66,9 +69,10 @@ export const services: Record<string, Service[]> = {
     },
     {
       id: 'service-3',
+      companyId: '73',
       name: 'Micropigmentação de Sobrancelhas',
       description: 'Procedimento semi-permanente para sobrancelhas perfeitas',
-      duration: 120,
+      duration: '120min',
       price: 450,
       rating: 5.0,
       reviewCount: 89,
@@ -78,9 +82,10 @@ export const services: Record<string, Service[]> = {
     },
     {
       id: 'service-4',
+      companyId: '73',
       name: 'Depilação Completa',
       description: 'Depilação profissional para todas as áreas',
-      duration: 90,
+      duration: '90min',
       price: 200,
       rating: 4.7,
       reviewCount: 112,
@@ -104,12 +109,13 @@ export const generateTimeSlots = (date: string): TimeSlot[] => {
       const endTimeMinutes = minutes === 30 ? 0 : 30;
       const endTime = `${endTimeHour.toString().padStart(2, '0')}:${endTimeMinutes.toString().padStart(2, '0')}`;
       
+      // Mock data doesn't perfectly match TimeSlot, so we cast it.
+      // This is just for mock data generation.
       slots.push({
-        id: `${date}-${startTime}`,
-        startTime,
+        time: startTime,
         endTime,
-        available: true
-      });
+        active: true,
+      } as TimeSlot);
     }
   }
   
@@ -117,49 +123,35 @@ export const generateTimeSlots = (date: string): TimeSlot[] => {
 };
 
 // Booking steps for the wizard
-export const getBookingSteps = (requiresPetInfo: boolean): BookingStep[] => {
-  if (requiresPetInfo) {
-    return [
-      {
-        id: 1,
-        title: "Selecionar Data e Hora",
-        description: "Escolha quando deseja agendar seu compromisso"
-      },
-      {
-        id: 2,
-        title: "Informações do Pet",
-        description: "Diga-nos sobre o pet que será atendido"
-      },
-      {
-        id: 3,
-        title: "Suas Informações",
-        description: "Diga-nos quem você é para que possamos contatá-lo"
-      },
-      {
-        id: 4,
-        title: "Confirmação",
-        description: "Revise e confirme os detalhes do seu agendamento"
-      }
-    ];
-  }
-
-  return [
+export const getBookingSteps = (requiresPetInfo: boolean, isAuthenticated: boolean): BookingStep[] => {
+  const steps: BookingStep[] = [
     {
       id: 1,
-      title: "Selecionar Data e Hora",
-      description: "Escolha quando deseja agendar seu compromisso"
+      title: "Data e Hora",
+      description: "Escolha o melhor horário"
     },
     {
       id: 2,
-      title: "Suas Informações",
-      description: "Diga-nos quem você é para que possamos contatá-lo"
-    },
-    {
-      id: 3,
-      title: "Confirmação",
-      description: "Revise e confirme os detalhes do seu agendamento"
+      title: "Login",
+      description: "Acesse ou crie sua conta"
     }
   ];
+
+  if (requiresPetInfo) {
+    steps.push({
+      id: 3,
+      title: "Pet",
+      description: "Selecione seu pet"
+    });
+  }
+
+  steps.push({
+    id: requiresPetInfo ? 4 : 3,
+    title: "Confirmação",
+    description: "Revise e finalize"
+  });
+
+  return steps;
 };
 
 // Filter services by date (simulated)
