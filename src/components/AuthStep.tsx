@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
-import { User } from '../types';
 import LoginForm from './Forms/LoginForm';
 import RegisterForm from './Forms/RegisterForm';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 interface AuthStepProps {
   onAuthSuccess: () => void;
@@ -46,6 +45,15 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
     };
     fetchUser();
   }, [token, user, setUser, logout]);
+
+  useEffect(() => {
+    if (country === 'Brasil') {
+      setPhonePrefix('+55');
+    } else if (country === 'Uruguai') {
+      setPhonePrefix('+598');
+    }
+    setPhone('');
+  }, [country]);
 
   const validate = () => {
     const newErrors = { name: '', email: '', password: '', confirmPassword: '', phone: '' };
@@ -96,7 +104,7 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
           email,
           senha: password,
           pais: country,
-          ddi: phonePrefix.replace('+', ''),
+          telefone_ddi: phonePrefix.replace('+', ''),
           telefone: phone,
         }),
       });

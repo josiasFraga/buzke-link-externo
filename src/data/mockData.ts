@@ -155,6 +155,6 @@ export const getBookingSteps = (requiresPetInfo: boolean, isAuthenticated: boole
 };
 
 // Filter services by date (simulated)
-export const filterServicesByDate = (services: Service[], date: string): Service[] => {
+export const filterServicesByDate = (services: Service[]): Service[] => {
   return services;
 };
