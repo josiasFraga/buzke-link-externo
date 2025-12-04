@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download } from 'lucide-react';
+import { AppleLogo, GooglePlayLogo } from '../Icons/StoreIcons';
 
 const BuzkeAppPromotion: React.FC = () => {
   return (
@@ -11,13 +11,24 @@ const BuzkeAppPromotion: React.FC = () => {
             <p className="text-indigo-100 mb-6">
               Agende seus serviços com facilidade, receba lembretes e aproveite ofertas exclusivas.
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               <a
-                href="#"
+                href="https://apps.apple.com/br/app/buzke/id1622471470"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
               >
-                <Download size={20} />
-                Baixar Agora
+                <AppleLogo size={20} />
+                App Store
+              </a>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.buzke&hl=pt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
+              >
+                <GooglePlayLogo size={20} />
+                Google Play
               </a>
             </div>
           </div>
@@ -31,7 +42,7 @@ const BuzkeAppPromotion: React.FC = () => {
                 </div>
               </div>
               <img
-                src="https://buzke-images.s3.sa-east-1.amazonaws.com/site/IMG_2937.PNG"
+                src="https://buzke-images.s3.sa-east-1.amazonaws.com/site/IMG_3842.PNG"
                 alt="Buzke App Preview"
                 className="relative rounded-[2.5rem] border-8 border-black shadow-xl"
                 style={{ aspectRatio: '9/19.5' }}

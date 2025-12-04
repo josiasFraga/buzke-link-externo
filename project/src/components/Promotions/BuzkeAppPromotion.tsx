@@ -31,7 +31,7 @@ const BuzkeAppPromotion: React.FC = () => {
                 </div>
               </div>
               <img
-                src="https://buzke-images.s3.sa-east-1.amazonaws.com/site/IMG_2937.PNG"
+                src="https://buzke-images.s3.sa-east-1.amazonaws.com/site/IMG_3842.PNG"
                 alt="Buzke App Preview"
                 className="relative rounded-[2.5rem] border-8 border-black shadow-xl"
                 style={{ aspectRatio: '9/19.5' }}

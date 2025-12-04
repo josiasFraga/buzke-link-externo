@@ -1,5 +1,5 @@
 import React from 'react';
-import { Instagram, Facebook, Twitter } from 'lucide-react';
+import { Instagram, Facebook, Linkedin } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -15,22 +15,22 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Links Úteis</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Termos de Uso</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Política de Privacidade</a></li>
+              <li><a href="https://buzke.com.br/termos-de-uso" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">Termos de Uso</a></li>
+              <li><a href="https://buzke.com.br/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">Política de Privacidade</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Redes Sociais</h3>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <a href="https://www.instagram.com/buzke_app/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
                 <Instagram className="w-6 h-6" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <a href="https://www.facebook.com/people/Buzke-App/61580959713969/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
                 <Facebook className="w-6 h-6" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter className="w-6 h-6" />
+              <a href="https://www.linkedin.com/company/buzke-app/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                <Linkedin className="w-6 h-6" />
               </a>
             </div>
           </div>
