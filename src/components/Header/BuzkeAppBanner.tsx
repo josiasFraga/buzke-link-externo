@@ -1,4 +1,3 @@
-import React from 'react';
 import { AppleLogo, GooglePlayLogo } from '../Icons/StoreIcons';
 
 const BuzkeAppBanner = () => {
