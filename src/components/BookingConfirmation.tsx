@@ -9,14 +9,12 @@ interface BookingConfirmationProps {
   appointment: Appointment;
   service: Service;
   appliedVoucher: Voucher | null;
-  onClose: () => void;
 }
 
 const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   appointment,
   service,
-  appliedVoucher,
-  onClose
+  appliedVoucher
 }) => {
 
   const { company } = useCompanyStore();

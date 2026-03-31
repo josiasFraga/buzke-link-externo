@@ -16,11 +16,6 @@ const DatePicker: React.FC<DatePickerProps> = ({
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const datePickerRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    // Set initial month to current month
-    setCurrentMonth(new Date());
-  }, []);
 
   // Handle scroll when time slots are loaded
   useEffect(() => {

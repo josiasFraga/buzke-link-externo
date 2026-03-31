@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Service } from '../types';
-import { Clock, DollarSign, ArrowRight, Star, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, ArrowRight, Star, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ServiceCardProps {
   service: Service;

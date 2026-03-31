@@ -3,6 +3,7 @@ import { Star, User } from 'lucide-react';
 import Modal from '../Modal';
 import { Company } from '../../types';
 import moment from 'moment';
+import { buildPublicApiUrl } from '../../lib/public-api';
 
 interface ReviewsModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
   const [offset, setOffset] = useState(0);
   const limit = 10;
   const observer = useRef<IntersectionObserver | null>(null);
+  const averageRating = company.media_avaliacoes ?? 0;
 
   const lastReviewElementRef = useCallback((node: HTMLDivElement) => {
     if (loading) return;
@@ -53,16 +55,10 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen && hasMore) {
-        fetchReviews();
-    }
-  }, [isOpen, offset]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/service-reviews/from-business?limit=${limit}&offset=${offset}&businessId=${company.id}`);
+      const response = await fetch(buildPublicApiUrl(`/service-reviews/from-business?limit=${limit}&offset=${offset}&businessId=${company.id}`));
       const data = await response.json();
       
       if (data.length < limit) {
@@ -75,7 +71,13 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [company.id, limit, offset]);
+
+  useEffect(() => {
+    if (isOpen && hasMore) {
+        fetchReviews();
+    }
+  }, [fetchReviews, hasMore, isOpen]);
 
   if (!isOpen) return null;
 
@@ -89,13 +91,13 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
       {company.media_avaliacoes !== null && (
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8 p-4 bg-indigo-50 rounded-xl">
           <div className="text-center">
-            <div className="text-5xl font-bold text-indigo-600">{company.media_avaliacoes}</div>
+            <div className="text-5xl font-bold text-indigo-600">{averageRating}</div>
             <div className="flex items-center justify-center mt-2">
               {[1, 2, 3, 4, 5].map(star => (
                 <Star 
                   key={star} 
                   size={18} 
-                  className={`${star <= Math.round(company.media_avaliacoes) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                  className={`${star <= Math.round(averageRating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
                 />
               ))}
             </div>

@@ -6,6 +6,7 @@ import RecurringOptions from './Forms/RecurringOptions';
 import HomeServiceOptions from './Forms/HomeServiceOptions';
 import VoucherInput from './Forms/VoucherInput';
 import { Calendar } from 'lucide-react';
+import { buildPublicApiUrl } from '../lib/public-api';
 
 interface ConfirmationStepProps {
   selectedService: Service;
@@ -16,6 +17,21 @@ interface ConfirmationStepProps {
   selectedPetId: number | null;
   appointmentData: AppointmentSlots | null;
   onBookingComplete: (appointment: Appointment, voucher: Voucher | null) => void;
+}
+
+interface AppointmentCreatePayload {
+  cliente_id: number;
+  servico_id: number;
+  horario: string;
+  domicilio: 'Y' | 'N';
+  endereco?: string;
+  ilimitado?: 'Y' | 'N';
+  limite?: string;
+  profissional_id?: number;
+  subcategoria_id?: number;
+  pet_id?: number;
+  vouchersIds?: number[];
+  valor_final: number;
 }
 
 const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
@@ -71,7 +87,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       return;
     }
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/vouchers/validate?code=${voucherCode}&business_id=${selectedService.companyId}`, {
+      const response = await fetch(buildPublicApiUrl(`/vouchers/validate?code=${voucherCode}&business_id=${selectedService.companyId}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -103,7 +119,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         prof => prof.id === selectedProfessionalId
       );
 
-      const payload: any = {
+      const payload: AppointmentCreatePayload = {
         cliente_id: parseInt(selectedService.companyId),
         servico_id: parseInt(selectedService.id),
         horario: appointmentDate,
@@ -120,7 +136,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         valor_final: totalPrice,
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/appointments/create-from-external-link`, {
+      const response = await fetch(buildPublicApiUrl('/appointments/create-from-external-link'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),

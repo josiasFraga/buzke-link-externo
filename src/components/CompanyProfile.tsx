@@ -1,27 +1,25 @@
+'use client';
+
 import React, { useState, ReactNode } from 'react';
-import { Company, Service } from '../types';
+import { Company } from '../types';
 import BuzkeAppBanner from './Header/BuzkeAppBanner';
 import CompanyHeader from './Header/CompanyHeader';
 import BuzkeAppPromotion from './Promotions/BuzkeAppPromotion';
 import BusinessHoursModal from './Modals/BusinessHoursModal';
 import ReviewsModal from './Modals/ReviewsModal';
 import Footer from './Footer/Footer';
-import { useNavigate } from 'react-router-dom';
 
 interface CompanyProfileProps {
   company: Company;
-  onSelectService: (service: Service) => void;
   children: ReactNode;
 }
 
 const CompanyProfile: React.FC<CompanyProfileProps> = ({ 
   company, 
-  onSelectService,
   children
 }) => {
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
-  const navigate = useNavigate();
 
   if (!company) {
     return (
@@ -34,12 +32,12 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           </div>
           <h1 className="text-2xl font-bold mb-2 text-gray-800">Empresa Não Encontrada</h1>
           <p className="text-gray-600 mb-4">A empresa que você está procurando não existe ou foi removida.</p>
-          <button 
-            onClick={() => navigate('/@mdbeautystudio')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          <a
+            href="/"
+            className="inline-flex px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Ir para Página Inicial
-          </button>
+          </a>
         </div>
       </div>
     );

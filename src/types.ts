@@ -1,5 +1,7 @@
 export interface Company {
   id: string;
+  slug?: string;
+  username?: string;
   name: string;
   logo: string;
   coverPhoto: string;

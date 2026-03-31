@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { Service, TimeSlot, AppointmentSlots, Appointment, Pet, Voucher } from '../types';
+import { Service, TimeSlot, AppointmentSlots, Appointment, Voucher } from '../types';
 import Modal from './Modal';
 import DatePicker from './DatePicker';
 import TimeSlotPicker from './TimeSlotPicker';
@@ -13,7 +12,6 @@ import ConfirmationStep from './ConfirmationStep';
 import BookingConfirmation from './BookingConfirmation';
 import { Calendar, ArrowLeft } from 'lucide-react';
 import { getBookingSteps } from '../data/mockData';
-import useAuthStore from '../store/authStore';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -42,25 +40,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onDateSelected,
   appointmentData
 }) => {
-  const { username } = useParams<{ username: string }>();
   const modalRef = useRef<HTMLDivElement>(null);
-  const { isAuthenticated, user } = useAuthStore();
 
   const [bookingStep, setBookingStep] = useState(1);
-  const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<number | null>(null);
   const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
-  const [showProfessionalSelector, setShowProfessionalSelector] = useState(false);
-  const [showSportSelector, setShowSportSelector] = useState(false);
-  const [timeSlotsLoaded, setTimeSlotsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
 
   const requiresPetInfo = appointmentData?.selecao_pet || false;
-  const bookingSteps = getBookingSteps(requiresPetInfo, isAuthenticated);
+  const bookingSteps = getBookingSteps(requiresPetInfo);
   const finalStep = bookingSteps.length + 1;
+  const timeSlotsLoaded = timeSlots.length > 0;
+  const isLoadingTimeSlots = Boolean(selectedDate && !appointmentData);
+  const showProfessionalSelector = Boolean(selectedTimeSlot && appointmentData?.tipo === 'Serviço');
+  const showSportSelector = Boolean(selectedTimeSlot && appointmentData?.tipo === 'Quadra');
 
   const scrollToTop = () => {
     if (modalRef.current) {
@@ -73,49 +69,21 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   useEffect(() => {
-    setBookingStep(1);
-    setAppointment(null);
-    setSelectedProfessionalId(null);
-    setSelectedSportId(null);
-    setShowProfessionalSelector(false);
-    setShowSportSelector(false);
-    setTimeSlotsLoaded(false);
-    setError(null);
-    setSelectedPetId(null);
-  }, [selectedService, isOpen]);
-
-  useEffect(() => {
-    setSelectedProfessionalId(null);
-    setSelectedSportId(null);
-  }, [selectedDate, selectedTimeSlot]);
-
-  useEffect(() => {
-    setTimeSlotsLoaded(timeSlots.length > 0);
-    setIsLoadingTimeSlots(false);
-  }, [timeSlots]);
-
-  useEffect(() => {
-    if (selectedTimeSlot) {
-      if (appointmentData?.tipo === 'Serviço') {
-        setShowProfessionalSelector(true);
-        setShowSportSelector(false);
-      } else if (appointmentData?.tipo === 'Quadra') {
-        setShowSportSelector(true);
-        setShowProfessionalSelector(false);
-      } else {
-        setShowProfessionalSelector(false);
-        setShowSportSelector(false);
-      }
-    }
-  }, [selectedTimeSlot, appointmentData?.tipo]);
-
-  useEffect(() => {
     scrollToTop();
   }, [bookingStep, appointment]);
 
   const handleDateSelect = (date: string) => {
-    setIsLoadingTimeSlots(true);
+    setError(null);
+    setSelectedProfessionalId(null);
+    setSelectedSportId(null);
     onSelectDate(date);
+  };
+
+  const handleTimeSlotSelect = (timeSlotId: string) => {
+    setError(null);
+    setSelectedProfessionalId(null);
+    setSelectedSportId(null);
+    onSelectTimeSlot(timeSlotId);
   };
 
   const handleNextStep = () => {
@@ -136,10 +104,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const handleBack = () => {
     setError(null);
     setBookingStep(prev => prev - 1);
-  };
-
-  const handleAuthSuccess = () => {
-    handleNextStep();
   };
 
   const handlePetSelected = (petId: number) => {
@@ -187,7 +151,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           </div>
           <DatePicker onSelectDate={handleDateSelect} selectedDate={selectedDate} onDateSelected={onDateSelected} timeSlotsLoaded={timeSlotsLoaded} />
-          {selectedDate && <TimeSlotPicker timeSlots={timeSlots} selectedTimeSlot={selectedTimeSlot} onSelectTimeSlot={onSelectTimeSlot} isLoading={isLoadingTimeSlots} />}
+          {selectedDate && <TimeSlotPicker timeSlots={timeSlots} selectedTimeSlot={selectedTimeSlot} onSelectTimeSlot={handleTimeSlotSelect} isLoading={isLoadingTimeSlots} />}
           {showProfessionalSelector && appointmentData?.profissionais && selectedTimeSlotData && <ProfessionalSelector professionals={appointmentData.profissionais} selectedProfessionalId={selectedProfessionalId} onSelectProfessional={setSelectedProfessionalId} availableProfessionals={selectedTimeSlotData.availableProfessionals} />}
           {showSportSelector && appointmentData?.subcategorias && <SportSelector sports={appointmentData.subcategorias} selectedSportId={selectedSportId} onSelectSport={setSelectedSportId} />}
           {selectedDate && selectedTimeSlot && (
@@ -252,7 +216,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         </div>
       )}
       {bookingStep === finalStep && appointment && selectedService ? (
-        <BookingConfirmation appointment={appointment} service={selectedService} appliedVoucher={appliedVoucher} onClose={handleCloseAndReset} />
+        <BookingConfirmation appointment={appointment} service={selectedService} appliedVoucher={appliedVoucher} />
       ) : (
         renderStepContent()
       )}

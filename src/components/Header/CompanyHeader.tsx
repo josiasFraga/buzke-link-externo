@@ -1,6 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MapPin, Clock, Star, Phone } from 'lucide-react';
 import { Company } from '../../types';
+
+interface DecorativeDot {
+  id: number;
+  width: string;
+  height: string;
+  top: string;
+  left: string;
+  animationDelay: string;
+  animationDuration: string;
+}
 
 interface CompanyHeaderProps {
   company: Company;
@@ -9,6 +19,18 @@ interface CompanyHeaderProps {
 }
 
 const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderProps) => {
+  const [decorativeDots] = useState<DecorativeDot[]>(() =>
+    Array.from({ length: 20 }, (_, id) => ({
+      id,
+      width: `${Math.random() * 4 + 1}px`,
+      height: `${Math.random() * 4 + 1}px`,
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
+      animationDelay: `${Math.random() * 5}s`,
+      animationDuration: `${Math.random() * 10 + 5}s`,
+    }))
+  );
+
   const openGoogleMaps = () => {
     const address = `${company.address?.street}, ${company.address?.number} - ${company.address?.neighborhood}, ${company.address?.city} - ${company.address?.state}`;
     const encodedAddress = encodeURIComponent(address);
@@ -64,17 +86,17 @@ const CompanyHeader = ({ company, onOpenHours, onOpenReviews }: CompanyHeaderPro
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80">
         <div className="absolute inset-0 overflow-hidden opacity-20">
-          {[...Array(20)].map((_, i) => (
+          {decorativeDots.map((dot) => (
             <div 
-              key={i}
+              key={dot.id}
               className="absolute rounded-full bg-white animate-pulse"
               style={{
-                width: `${Math.random() * 4 + 1}px`,
-                height: `${Math.random() * 4 + 1}px`,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${Math.random() * 10 + 5}s`
+                width: dot.width,
+                height: dot.height,
+                top: dot.top,
+                left: dot.left,
+                animationDelay: dot.animationDelay,
+                animationDuration: dot.animationDuration,
               }}
             />
           ))}

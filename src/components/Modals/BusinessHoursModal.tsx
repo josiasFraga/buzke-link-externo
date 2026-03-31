@@ -1,5 +1,4 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
 import Modal from '../Modal';
 
 interface BusinessHoursModalProps {

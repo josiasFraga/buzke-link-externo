@@ -3,6 +3,7 @@ import useAuthStore from '../store/authStore';
 import LoginForm from './Forms/LoginForm';
 import RegisterForm from './Forms/RegisterForm';
 import { LogOut } from 'lucide-react';
+import { buildPublicApiUrl } from '../lib/public-api';
 
 interface AuthStepProps {
   onAuthSuccess: () => void;
@@ -32,13 +33,13 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
     const fetchUser = async () => {
       if (token && !user) {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
+          const response = await fetch(buildPublicApiUrl('/users/me'), {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (!response.ok) throw new Error('Falha ao buscar dados do usuário.');
           const userData = await response.json();
           setUser(userData);
-        } catch (e) {
+        } catch {
           logout(); // Token inválido, deslogar
         }
       }
@@ -76,7 +77,7 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const response = await fetch(buildPublicApiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -96,7 +97,7 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/create`, {
+      const response = await fetch(buildPublicApiUrl('/users/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

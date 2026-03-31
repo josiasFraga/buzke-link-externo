@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
 import { Pet, PetType } from '../types';
-import { PawPrint, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
+import { buildPublicApiUrl } from '../lib/public-api';
 
 interface PetStepProps {
   onPetSelected: (petId: number) => void;
@@ -31,10 +32,10 @@ const PetStep: React.FC<PetStepProps> = ({ onPetSelected }) => {
       }
       try {
         const [petsResponse, typesResponse] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL}/pet`, {
+          fetch(buildPublicApiUrl('/pet'), {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${import.meta.env.VITE_API_URL}/pet-types`),
+          fetch(buildPublicApiUrl('/pet-types')),
         ]);
 
         if (!petsResponse.ok) throw new Error('Falha ao buscar seus pets.');
@@ -66,7 +67,7 @@ const PetStep: React.FC<PetStepProps> = ({ onPetSelected }) => {
     setFormError(null);
     setIsCreatingPet(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/pet`, {
+      const response = await fetch(buildPublicApiUrl('/pet'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
