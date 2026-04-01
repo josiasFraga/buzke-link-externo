@@ -51,6 +51,7 @@ const PublicBookingHero = ({
   const mapsHref = getMapsHref(company);
   const whatsappHref = getWhatsappHref(company.whatsapp, company.name);
   const phoneHref = getPhoneHref(company.phone);
+  const bookingHref = company.slug ? `/${company.slug}#section-services` : '#section-services';
   const hasLogo = Boolean(company.logo?.trim());
 
   const metaItems: MetaChipItem[] = [];
@@ -167,7 +168,7 @@ const PublicBookingHero = ({
             </div>
 
             <div className="mt-7 sm:mt-8">
-              <HeroActions whatsappHref={whatsappHref} mapsHref={mapsHref} />
+              <HeroActions bookingHref={bookingHref} whatsappHref={whatsappHref} mapsHref={mapsHref} />
             </div>
 
             <div className="theme-text-secondary mt-7 grid gap-2.5 text-sm sm:grid-cols-3 sm:gap-x-5 sm:gap-y-2.5">
