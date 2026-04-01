@@ -97,7 +97,7 @@ export const services: Record<string, Service[]> = {
 };
 
 // Generate time slots for a given date
-export const generateTimeSlots = (date: string): TimeSlot[] => {
+export const generateTimeSlots = (): TimeSlot[] => {
   const slots: TimeSlot[] = [];
   const startHour = 6; // 6 AM based on business hours
   const endHour = 20; // 8 PM based on business hours
@@ -123,7 +123,7 @@ export const generateTimeSlots = (date: string): TimeSlot[] => {
 };
 
 // Booking steps for the wizard
-export const getBookingSteps = (requiresPetInfo: boolean, isAuthenticated: boolean): BookingStep[] => {
+export const getBookingSteps = (requiresPetInfo: boolean): BookingStep[] => {
   const steps: BookingStep[] = [
     {
       id: 1,

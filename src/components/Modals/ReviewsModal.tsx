@@ -3,6 +3,7 @@ import { Star, User } from 'lucide-react';
 import Modal from '../Modal';
 import { Company } from '../../types';
 import moment from 'moment';
+import { buildPublicApiUrl } from '../../lib/public-api';
 
 interface ReviewsModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
   const [offset, setOffset] = useState(0);
   const limit = 10;
   const observer = useRef<IntersectionObserver | null>(null);
+  const averageRating = company.media_avaliacoes ?? 0;
 
   const lastReviewElementRef = useCallback((node: HTMLDivElement) => {
     if (loading) return;
@@ -53,16 +55,10 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen && hasMore) {
-        fetchReviews();
-    }
-  }, [isOpen, offset]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/service-reviews/from-business?limit=${limit}&offset=${offset}&businessId=${company.id}`);
+      const response = await fetch(buildPublicApiUrl(`/service-reviews/from-business?limit=${limit}&offset=${offset}&businessId=${company.id}`));
       const data = await response.json();
       
       if (data.length < limit) {
@@ -75,7 +71,13 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [company.id, limit, offset]);
+
+  useEffect(() => {
+    if (isOpen && hasMore) {
+        fetchReviews();
+    }
+  }, [fetchReviews, hasMore, isOpen]);
 
   if (!isOpen) return null;
 
@@ -87,19 +89,19 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
     >
       {/* Summary Section */}
       {company.media_avaliacoes !== null && (
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8 p-4 bg-indigo-50 rounded-xl">
+        <div className="theme-panel-accent mb-8 flex flex-col items-center gap-6 p-4 md:flex-row md:items-start">
           <div className="text-center">
-            <div className="text-5xl font-bold text-indigo-600">{company.media_avaliacoes}</div>
+            <div className="theme-text-accent text-5xl font-bold">{averageRating}</div>
             <div className="flex items-center justify-center mt-2">
               {[1, 2, 3, 4, 5].map(star => (
                 <Star 
                   key={star} 
                   size={18} 
-                  className={`${star <= Math.round(company.media_avaliacoes) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                  className={`${star <= Math.round(averageRating) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--color-border-strong)]'}`} 
                 />
               ))}
             </div>
-            <div className="text-sm text-gray-600 mt-1">{company.total_avaliacoes} avaliações</div>
+            <div className="theme-text-secondary mt-1 text-sm">{company.total_avaliacoes} avaliações</div>
           </div>
         </div>
       )}
@@ -112,7 +114,7 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
                 <div 
                     key={review.id} 
                     ref={isLastElement ? lastReviewElementRef : null}
-                    className="border-b border-gray-100 pb-4 last:border-0"
+                  className="border-b border-[var(--color-border)] pb-4 last:border-0"
                 >
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-3">
@@ -123,13 +125,13 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
                                     className="w-10 h-10 rounded-full object-cover"
                                 />
                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <User size={20} className="text-gray-500" />
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface-secondary)]">
+                                <User size={20} className="theme-text-secondary" />
                                 </div>
                             )}
                             <div>
-                                <h4 className="font-semibold text-gray-900">{review.usuario.nome}</h4>
-                                <p className="text-xs text-gray-500">{moment(review.created).format('DD/MM/YYYY')}</p>
+                              <h4 className="theme-text-primary font-semibold">{review.usuario.nome}</h4>
+                              <p className="theme-text-muted text-xs">{moment(review.created).format('DD/MM/YYYY')}</p>
                             </div>
                         </div>
                         <div className="flex">
@@ -137,14 +139,14 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
                                 <Star 
                                     key={star} 
                                     size={14} 
-                                    className={`${star <= review.avaliacao ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                className={`${star <= review.avaliacao ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--color-border-strong)]'}`} 
                                 />
                             ))}
                         </div>
                     </div>
-                    <p className="text-gray-700 mb-2">{review.comentario}</p>
+                        <p className="theme-text-secondary mb-2">{review.comentario}</p>
                     {review.servico && (
-                        <div className="text-xs text-indigo-600 bg-indigo-50 inline-block px-2 py-1 rounded">
+                          <div className="theme-panel-accent theme-text-accent inline-block px-2 py-1 text-xs">
                             Serviço: {review.servico.nome}
                         </div>
                     )}
@@ -154,17 +156,17 @@ const ReviewsModal = ({ isOpen, onClose, company }: ReviewsModalProps) => {
         
         {loading && (
             <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-[var(--color-primary)]"></div>
             </div>
         )}
 
         {!loading && reviews.length === 0 && company.media_avaliacoes === null && (
              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <Star size={24} className="text-gray-400" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-surface-secondary)]">
+                  <Star size={24} className="theme-text-muted" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Nenhuma Avaliação</h3>
-                <p className="text-gray-600">
+                <h3 className="theme-text-primary mb-2 text-xl font-bold">Nenhuma Avaliação</h3>
+                <p className="theme-text-secondary">
                   Este estabelecimento ainda não recebeu avaliações.
                   Seja o primeiro a avaliar após sua visita!
                 </p>

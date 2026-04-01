@@ -19,12 +19,12 @@ const HomeServiceOptions: React.FC<HomeServiceOptionsProps> = ({
   error
 }) => {
   return (
-    <div className="bg-indigo-50 p-4 rounded-lg">
+    <div className="theme-panel-accent p-4">
       <div className="flex items-start mb-3">
-        <Home size={20} className="text-indigo-600 mr-2 mt-0.5 flex-shrink-0" />
+        <Home size={20} className="theme-text-accent mr-2 mt-0.5 flex-shrink-0" />
         <div>
-          <h4 className="font-medium text-indigo-800">Atendimento a Domicílio</h4>
-          <p className="text-sm text-indigo-600 mt-1">
+          <h4 className="theme-text-primary font-medium">Atendimento a Domicílio</h4>
+          <p className="theme-text-accent mt-1 text-sm">
             Este serviço pode ser realizado na sua residência
           </p>
         </div>
@@ -37,9 +37,9 @@ const HomeServiceOptions: React.FC<HomeServiceOptionsProps> = ({
           checked={isAtHome}
           onChange={(e) => onAtHomeChange(e.target.checked)}
           disabled={isRequired}
-          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 disabled:opacity-50"
+          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] disabled:opacity-50"
         />
-        <label htmlFor="atHome" className="ml-2 text-sm font-medium text-gray-700">
+        <label htmlFor="atHome" className="theme-text-secondary ml-2 text-sm font-medium">
           {isRequired
             ? 'Este serviço é exclusivamente a domicílio'
             : 'Sim, quero atendimento a domicílio'
@@ -49,7 +49,7 @@ const HomeServiceOptions: React.FC<HomeServiceOptionsProps> = ({
 
       {isAtHome && (
         <div className="mt-3">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="address" className="theme-text-secondary mb-1 block text-sm font-medium">
             Endereço Completo
           </label>
           <textarea
@@ -58,11 +58,9 @@ const HomeServiceOptions: React.FC<HomeServiceOptionsProps> = ({
             onChange={(e) => onAddressChange(e.target.value)}
             placeholder="Digite seu endereço completo, incluindo número, complemento, bairro e CEP"
             rows={3}
-            className={`w-full px-4 py-3 border rounded-lg ${
-              error ? 'border-red-500' : 'border-gray-300'
-            } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+            className={`theme-input px-4 py-3 ${error ? 'border-red-500' : ''}`}
           />
-          {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+          {error && <p className="theme-text-danger mt-1 text-sm">{error}</p>}
         </div>
       )}
     </div>

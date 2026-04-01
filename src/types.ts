@@ -1,5 +1,7 @@
 export interface Company {
   id: string;
+  slug?: string;
+  username?: string;
   name: string;
   logo: string;
   coverPhoto: string;
@@ -34,6 +36,7 @@ export interface Professional {
 
 export interface Service {
   id: string;
+  slug?: string;
   companyId: string;
   name: string;
   description: string;

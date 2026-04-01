@@ -1,23 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Service } from '../../types';
 import ServicesSection from './ServicesSection';
 import moment from 'moment';
 import 'moment/locale/pt-br';
+import { buildPublicApiUrl } from '../../lib/public-api';
+import {
+  mergeServicesWithSlugEntries,
+  parseServiceSlugEntries,
+  slugifyServiceName,
+} from '../../lib/service-slugs';
 
 moment.locale('pt-br');
 
 interface ServicesListProps {
   companyId: string;
   onSelectService: (service: Service) => void;
+  getServiceHref?: (service: Service) => string;
+  initialServices?: Service[];
+  initialSelectedDate?: string | null;
 }
 
-const ServicesList: React.FC<ServicesListProps> = ({ companyId, onSelectService }) => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return moment().format('YYYY-MM-DD');
-  });
-  const [realCompanyId, setRealCompanyId] = useState<string | null>(null);
+interface RawServicePhoto {
+  imagem: string;
+}
+
+interface RawServiceSchedule {
+  duracao: string;
+  valor_padrao: number;
+}
+
+interface RawService {
+  id: number;
+  slug?: string;
+  nome: string;
+  descricao: string;
+  horarios_atendimento: RawServiceSchedule[];
+  fotos: RawServicePhoto[];
+  media_avaliacoes?: number;
+  tipo?: string;
+}
+
+const ServicesList: React.FC<ServicesListProps> = ({
+  companyId,
+  onSelectService,
+  getServiceHref,
+  initialServices = [],
+  initialSelectedDate,
+}) => {
+  const [services, setServices] = useState<Service[]>(() => (initialSelectedDate ? initialServices : []));
+  const [isLoading, setIsLoading] = useState(Boolean(initialSelectedDate && initialServices.length === 0));
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate || null);
+  const [hasConsumedInitialData, setHasConsumedInitialData] = useState(Boolean(initialSelectedDate && initialServices.length > 0));
 
   const formatDuration = (duration: string): string => {
     const [hours, minutes] = duration.split(':').map(Number);
@@ -33,67 +66,66 @@ const ServicesList: React.FC<ServicesListProps> = ({ companyId, onSelectService 
     return `${hours}h ${minutes}min`;
   };
 
-  const fetchServices = async (date: string, id: string) => {
+  const fetchServices = useCallback(async (date: string, id: string) => {
     setIsLoading(true);
     const formattedDate = moment(date).format('DD/MM/YYYY');
-    
-    const url = `${import.meta.env.VITE_API_URL}/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${id}`;
-    
+
+    const servicesUrl = buildPublicApiUrl(`/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${id}`);
+    const slugsUrl = buildPublicApiUrl(`/services/slugs?empresa=${id}`);
+
     try {
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      const transformedServices: Service[] = data.map(service => ({
+      const [servicesResponse, slugsResponse] = await Promise.all([
+        fetch(servicesUrl),
+        fetch(slugsUrl).catch(() => null),
+      ]);
+
+      const data: RawService[] = await servicesResponse.json();
+      const slugPayload = slugsResponse?.ok ? await slugsResponse.json() : [];
+      const slugEntries = parseServiceSlugEntries(slugPayload);
+
+      const transformedServices: Service[] = data.map((service) => ({
         id: service.id.toString(),
+        slug: service.slug?.trim() || undefined,
         companyId: id,
         name: service.nome,
         description: service.descricao,
         duration: formatDuration(service.horarios_atendimento[0].duracao),
         price: service.horarios_atendimento[0].valor_padrao,
-        images: service.fotos.map(foto => foto.imagem),
+        images: service.fotos.map((foto) => foto.imagem),
         rating: service.media_avaliacoes,
         reviewCount: 0,
         tipo: service.tipo
       }));
-      
-      setServices(transformedServices);
+
+      setServices(
+        mergeServicesWithSlugEntries(transformedServices, slugEntries).map((service) => ({
+          ...service,
+          slug: service.slug || slugifyServiceName(service.name) || undefined,
+        }))
+      );
     } catch (err) {
       console.error('Error fetching services:', err);
       setServices([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const fetchCompanyDetails = async () => {
-      try {
-        setIsLoading(true);
-        // Check if companyId is a number
-        if (isNaN(Number(companyId))) {
-          // If it's not a number, assume it's a username and fetch by username
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/business/${companyId}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch company details');
-          }
-          const data = await response.json();
-          const id = data.id.toString();
-          setRealCompanyId(id);
-          // Fetch services after getting the real company ID
-          await fetchServices(selectedDate, id);
-        } else {
-          // If it's already a number, use it directly
-          setRealCompanyId(companyId);
-          await fetchServices(selectedDate, companyId);
-        }
-      } catch (error) {
-        console.error('Error fetching company details:', error);
-        setIsLoading(false);
-      }
-    };
+    if (!selectedDate) {
+      setServices([]);
+      setIsLoading(false);
+      return;
+    }
 
-    fetchCompanyDetails();
-  }, [companyId, selectedDate]);
+    if (hasConsumedInitialData && selectedDate === initialSelectedDate) {
+      setHasConsumedInitialData(false);
+      setIsLoading(false);
+      return;
+    }
+
+    fetchServices(selectedDate, companyId);
+  }, [companyId, fetchServices, hasConsumedInitialData, initialSelectedDate, selectedDate]);
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -103,6 +135,7 @@ const ServicesList: React.FC<ServicesListProps> = ({ companyId, onSelectService 
     <ServicesSection
       services={services}
       onSelectService={onSelectService}
+      getServiceHref={getServiceHref}
       isLoading={isLoading}
       selectedDate={selectedDate}
       onDateChange={handleDateChange}

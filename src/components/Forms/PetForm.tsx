@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Pet, PetType } from '../../types';
+import { PetType } from '../../types';
 import { PawPrint as Paw } from 'lucide-react';
+import { buildPublicApiUrl } from '../../lib/public-api';
+
+interface PetFormData {
+  nome: string;
+  sexo: 'F' | 'M';
+  pet_tipo_id: number;
+}
 
 interface PetFormProps {
-  onSubmit: (pet: Pet) => void;
+  onSubmit: (pet: PetFormData) => void;
 }
 
 const PetForm: React.FC<PetFormProps> = ({ onSubmit }) => {
@@ -25,12 +32,12 @@ const PetForm: React.FC<PetFormProps> = ({ onSubmit }) => {
   useEffect(() => {
     const fetchPetTypes = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/pet-types`);
+        const response = await fetch(buildPublicApiUrl('/pet-types'));
         const data = await response.json();
         setPetTypes(data);
       } catch (error) {
         console.error('Error fetching pet types:', error);
-        setErrors({ ...errors, type: 'Erro ao carregar tipos de pet' });
+        setErrors((currentErrors) => ({ ...currentErrors, type: 'Erro ao carregar tipos de pet' }));
       } finally {
         setIsLoading(false);
       }

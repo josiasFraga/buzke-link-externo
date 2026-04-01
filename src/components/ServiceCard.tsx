@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Service } from '../types';
-import { Clock, DollarSign, ArrowRight, Star, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, ArrowRight, Star, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ServiceCardProps {
   service: Service;
   onSelect: () => void;
+  href?: string;
 }
 
-const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
+const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const slideInterval = useRef<number | null>(null);
@@ -32,6 +34,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
   // Handle next image
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (service.images) {
       setCurrentImageIndex(prev => 
         prev === service.images!.length - 1 ? 0 : prev + 1
@@ -42,6 +45,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
   // Handle previous image
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (service.images) {
       setCurrentImageIndex(prev => 
         prev === 0 ? service.images!.length - 1 : prev - 1
@@ -52,6 +56,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
   // Toggle fullscreen
   const toggleFullscreen = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setIsFullscreen(!isFullscreen);
   };
   
@@ -66,11 +71,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
             <Star 
               key={star} 
               size={14} 
-              className={`${star <= Math.round(service.rating!) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+              className={`${star <= Math.round(service.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--color-border-strong)]'}`} 
             />
           ))}
         </div>
-        <span className="text-sm text-gray-600">
+        <span className="theme-text-secondary text-sm">
           ({service.reviewCount})
         </span>
       </div>
@@ -80,7 +85,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
   return (
     <>
       <div 
-        className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-100"
+        className="theme-card cursor-pointer overflow-hidden rounded-[var(--radius-button)] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
         onClick={onSelect}
       >
         {/* Image Slideshow */}
@@ -96,20 +101,23 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
             {service.images.length > 1 && (
               <>
                 <button 
+                  type="button"
                   onClick={handlePrevImage}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70 transition-colors"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
                 >
                   <ChevronLeft size={20} />
                 </button>
                 <button 
+                  type="button"
                   onClick={handleNextImage}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
                 >
                   <ChevronRight size={20} />
                 </button>
                 <button 
+                  type="button"
                   onClick={toggleFullscreen}
-                  className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70 transition-colors"
+                  className="absolute right-2 top-2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
                 >
                   <Maximize2 size={16} />
                 </button>
@@ -132,32 +140,49 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
         
         <div className="p-6">
           <div className="flex justify-between items-start mb-2">
-            <h3 className="text-xl font-bold text-gray-800">{service.name}</h3>
+            <h3 className="theme-text-primary text-xl font-bold">
+              {href ? (
+                <Link href={href} onClick={(event) => event.stopPropagation()} className="hover:underline">
+                  {service.name}
+                </Link>
+              ) : (
+                service.name
+              )}
+            </h3>
             {renderRating()}
           </div>
           
-          <p className="text-gray-600 mb-6 min-h-[60px]">{service.description}</p>
+          <p className="theme-text-secondary mb-6 min-h-[60px]">{service.description}</p>
           
           <div className="flex items-center justify-between text-sm mb-4">
-            <div className="flex items-center bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">
+            <div className="theme-panel-accent flex items-center rounded-full px-3 py-1">
               <Clock size={16} className="mr-1" />
               <span className="font-medium">{service.duration}</span>
             </div>
-            <div className="font-bold text-lg text-gray-800">
+            <div className="theme-text-primary text-lg font-bold">
               R$ {service.price}
             </div>
           </div>
         </div>
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3 px-4 flex justify-between items-center">
-          <span className="font-medium">Agendar Agora</span>
-          <ArrowRight size={18} />
+        <div className="theme-gradient-accent flex items-center justify-between px-4 py-3 text-white">
+          {href ? (
+            <Link href={href} onClick={(event) => event.stopPropagation()} className="flex flex-1 items-center justify-between gap-3 font-medium">
+              <span>Agendar Agora</span>
+              <ArrowRight size={18} />
+            </Link>
+          ) : (
+            <>
+              <span className="font-medium">Agendar Agora</span>
+              <ArrowRight size={18} />
+            </>
+          )}
         </div>
       </div>
       
       {/* Fullscreen Image Modal */}
       {isFullscreen && service.images && (
         <div 
-          className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
           onClick={toggleFullscreen}
         >
           <div className="relative w-full max-w-5xl">
@@ -168,11 +193,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
             />
             
             <button 
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleFullscreen(e);
               }}
-              className="absolute top-4 right-4 bg-white bg-opacity-25 text-white p-2 rounded-full hover:bg-opacity-50 transition-colors"
+              className="absolute right-4 top-4 rounded-full bg-white/25 p-2 text-white transition-colors hover:bg-white/50"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -180,21 +206,23 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect }) => {
             </button>
             
             <button 
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrevImage(e);
               }}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-25 text-white p-3 rounded-full hover:bg-opacity-50 transition-colors"
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/25 p-3 text-white transition-colors hover:bg-white/50"
             >
               <ChevronLeft size={24} />
             </button>
             
             <button 
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleNextImage(e);
               }}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-25 text-white p-3 rounded-full hover:bg-opacity-50 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/25 p-3 text-white transition-colors hover:bg-white/50"
             >
               <ChevronRight size={24} />
             </button>

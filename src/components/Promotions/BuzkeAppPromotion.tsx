@@ -3,12 +3,12 @@ import { AppleLogo, GooglePlayLogo } from '../Icons/StoreIcons';
 
 const BuzkeAppPromotion: React.FC = () => {
   return (
-    <section className="bg-gradient-to-r from-indigo-600 to-indigo-800 py-12 px-4">
+    <section className="theme-app-promo-section px-4 py-12 text-white">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-white max-w-xl">
             <h2 className="text-3xl font-bold mb-4">Baixe o App Buzke</h2>
-            <p className="text-indigo-100 mb-6">
+            <p className="mb-6 text-white/80">
               Agende seus serviços com facilidade, receba lembretes e aproveite ofertas exclusivas.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -16,7 +16,7 @@ const BuzkeAppPromotion: React.FC = () => {
                 href="https://apps.apple.com/br/app/buzke/id1622471470"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
+                className="theme-secondary-btn px-6 py-3 font-semibold"
               >
                 <AppleLogo size={20} />
                 App Store
@@ -25,7 +25,7 @@ const BuzkeAppPromotion: React.FC = () => {
                 href="https://play.google.com/store/apps/details?id=com.buzke&hl=pt"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
+                className="theme-secondary-btn px-6 py-3 font-semibold"
               >
                 <GooglePlayLogo size={20} />
                 Google Play
