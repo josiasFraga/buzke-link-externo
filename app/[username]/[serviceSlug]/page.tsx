@@ -143,9 +143,8 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
   const canonicalServiceSlug = data.service.slug || params.serviceSlug;
   const description = buildServiceSeoDescription(data.company, data.service);
   const title = buildServiceTitle(data.company, data.service);
-  const image = data.service.images?.[0] || data.company.logo || data.company.coverPhoto;
-  const fallbackImage = new URL(buzkeLogo.src, siteUrl).toString();
   const canonicalPath = `/${canonicalUsername}/${canonicalServiceSlug}`;
+  const ogImagePath = `${canonicalPath}/opengraph-image`;
   const keywords = buildServiceKeywords(data.company, data.service);
 
   return {
@@ -160,13 +159,13 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
       description,
       type: 'website',
       url: canonicalPath,
-      images: [{ url: image || fallbackImage }],
+      images: [{ url: ogImagePath }],
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title,
       description,
-      images: [image || fallbackImage],
+      images: [ogImagePath],
     },
   };
 }

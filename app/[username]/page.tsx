@@ -158,7 +158,7 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
   if (usernameLanding) {
     const description = buildCompanyLandingDescription(company);
     const title = `${company.name} | Conheça a empresa`;
-    const image = company.logo || company.coverPhoto;
+    const ogImagePath = `${canonicalSlugPath || `/${params.username}`}/opengraph-image`;
 
     return {
       title,
@@ -176,13 +176,13 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
         title,
         description,
         type: 'website',
-        images: image ? [{ url: image }] : undefined,
+        images: [{ url: ogImagePath }],
       },
       twitter: {
-        card: image ? 'summary_large_image' : 'summary',
+        card: 'summary_large_image',
         title,
         description,
-        images: image ? [image] : undefined,
+        images: [ogImagePath],
       },
     };
   }
@@ -191,10 +191,9 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
   const services = await getServicesByCompanyId(company.id, selectedDate);
   const description = buildCompanySeoDescription(company, services);
   const title = buildCompanyTitle(company);
-  const image = company.logo || company.coverPhoto;
-  const fallbackImage = new URL(buzkeLogo.src, siteUrl).toString();
   const location = getLocationLabel(company);
   const canonicalPath = canonicalSlugPath || `/${params.username}`;
+  const ogImagePath = `${canonicalPath}/opengraph-image`;
   const keywords = [
     company.name,
     ...(company.categories || []),
@@ -214,13 +213,13 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
       description,
       type: 'website',
       url: canonicalPath,
-      images: [{ url: image || fallbackImage }],
+      images: [{ url: ogImagePath }],
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title,
       description,
-      images: [image || fallbackImage],
+      images: [ogImagePath],
     },
   };
 }
