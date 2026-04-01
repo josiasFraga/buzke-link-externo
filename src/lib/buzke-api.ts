@@ -318,20 +318,62 @@ export async function getEligibleBusinessSlugs() {
   }
 }
 
+function normalizeMetaText(text: string) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function trimMetaPart(text: string, maxLength: number) {
+  const normalized = normalizeMetaText(text);
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const truncated = normalized.slice(0, Math.max(0, maxLength - 3));
+  const boundary = truncated.lastIndexOf(' ');
+
+  return `${(boundary > 60 ? truncated.slice(0, boundary) : truncated).trim()}...`;
+}
+
+function buildMetaDescription(parts: Array<string | null | undefined>, maxLength = 160) {
+  const validParts = parts
+    .filter((part): part is string => Boolean(part && normalizeMetaText(part)))
+    .map((part) => normalizeMetaText(part));
+
+  const assembled: string[] = [];
+
+  for (const part of validParts) {
+    const candidate = assembled.length ? `${assembled.join(' ')} ${part}` : part;
+
+    if (candidate.length <= maxLength) {
+      assembled.push(part);
+      continue;
+    }
+
+    const remaining = maxLength - (assembled.join(' ').length + (assembled.length ? 1 : 0));
+
+    if (remaining > 20) {
+      assembled.push(trimMetaPart(part, remaining));
+    }
+
+    break;
+  }
+
+  return assembled.join(' ');
+}
+
 export function buildCompanyLandingDescription(company: Company) {
   const categories = company.categories?.slice(0, 3).join(', ');
   const location = company.address?.city && company.address?.state
     ? `${company.address.city} - ${company.address.state}`
     : null;
 
-  return [
+  return buildMetaDescription([
     `${company.name} no Buzke.`,
     categories ? `Especialidades: ${categories}.` : null,
     location ? `Atendimento em ${location}.` : null,
     'Veja os dados da empresa e siga para a página de agendamento.',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  ]);
 }
 
 export function buildCompanySeoDescription(company: Company, services: Service[]) {
@@ -341,15 +383,13 @@ export function buildCompanySeoDescription(company: Company, services: Service[]
     ? `${company.address.city} - ${company.address.state}`
     : company.address?.city || null;
 
-  return [
+  return buildMetaDescription([
     `${company.name} no Buzke.`,
     location ? `Agendamento online em ${location}.` : null,
     categories ? `Especialidades: ${categories}.` : null,
     highlightedServices ? `Agende online serviços como ${highlightedServices}.` : 'Agende online sem precisar baixar o app.',
     company.media_avaliacoes !== null ? `Empresa avaliada em ${company.media_avaliacoes.toFixed(1)} de 5.` : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  ]);
 }
 
 export function buildServiceSeoDescription(company: Company, service: Service) {
@@ -358,14 +398,12 @@ export function buildServiceSeoDescription(company: Company, service: Service) {
     ? `${company.address.city} - ${company.address.state}`
     : company.address?.city || null;
 
-  return [
+  return buildMetaDescription([
     `${service.name} em ${company.name}.`,
     location ? `Atendimento em ${location}.` : null,
     service.description || null,
     categories ? `Especialidades da empresa: ${categories}.` : null,
     service.duration ? `Duracao estimada de ${service.duration}.` : null,
     service.price > 0 ? `Agende online a partir de R$ ${service.price}.` : 'Agende online sem precisar baixar o app.',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  ]);
 }

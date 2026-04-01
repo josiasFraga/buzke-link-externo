@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import buzkeLogo from '../../../src/assets/logo.png';
 import ServiceBookingPageClient from '../../../src/components/ServiceBookingPageClient';
 import type { Company, Service } from '../../../src/types';
 import {
@@ -126,6 +127,7 @@ async function getPageData(params: ServicePageProps['params']) {
 
 export async function generateMetadata({ params }: ServicePageProps): Promise<Metadata> {
   const data = await getPageData(params);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
 
   if (!data?.company || !data.service) {
     return {
@@ -142,6 +144,7 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
   const description = buildServiceSeoDescription(data.company, data.service);
   const title = buildServiceTitle(data.company, data.service);
   const image = data.service.images?.[0] || data.company.logo || data.company.coverPhoto;
+  const fallbackImage = new URL(buzkeLogo.src, siteUrl).toString();
   const canonicalPath = `/${canonicalUsername}/${canonicalServiceSlug}`;
   const keywords = buildServiceKeywords(data.company, data.service);
 
@@ -157,13 +160,13 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
       description,
       type: 'website',
       url: canonicalPath,
-      images: [{ url: `${canonicalPath}/opengraph-image` }],
+      images: [{ url: image || fallbackImage }],
     },
     twitter: {
       card: image ? 'summary_large_image' : 'summary',
       title,
       description,
-      images: [`${canonicalPath}/opengraph-image`],
+      images: [image || fallbackImage],
     },
   };
 }
