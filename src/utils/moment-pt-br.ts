@@ -1,7 +1,8 @@
 // src/utils/moment-pt-br.ts
 import moment from 'moment';
+import 'moment/locale/pt-br';
 
-moment.defineLocale('pt-br', {
+moment.updateLocale('pt-br', {
   months: 'janeiro_fevereiro_março_abril_maio_junho_julho_agosto_setembro_outubro_novembro_dezembro'.split('_'),
   monthsShort: 'jan_fev_mar_abr_mai_jun_jul_ago_set_out_nov_dez'.split('_'),
   weekdays: 'domingo_segunda-feira_terça-feira_quarta-feira_quinta-feira_sexta-feira_sábado'.split('_'),
@@ -47,5 +48,7 @@ moment.defineLocale('pt-br', {
     doy: 4
   }
 });
+
+moment.locale('pt-br');
 
 export default moment;

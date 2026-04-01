@@ -1,4 +1,5 @@
-import React from 'react';
+import Image from 'next/image';
+import logo from '../../assets/logo.png';
 import { AppleLogo, GooglePlayLogo } from '../Icons/StoreIcons';
 
 const BuzkeAppBanner = () => {
@@ -6,11 +7,7 @@ const BuzkeAppBanner = () => {
     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
-          <img 
-            src="https://buzke.com.br/logo_white.png" 
-            alt="Buzke" 
-            className="h-6 mr-2"
-          />
+          <Image src={logo} alt="Buzke" className="mr-2 h-6 w-auto" priority />
         </div>
         <div className="flex gap-2">
           <a href="https://apps.apple.com/br/app/buzke/id1622471470" target="_blank" rel="noopener noreferrer" className="flex items-center text-sm bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors">

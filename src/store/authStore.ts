@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { User } from '../types';
 
+function isBrowser() {
+  return typeof window !== 'undefined';
+}
+
 interface AuthState {
   token: string | null;
   user: User | null;
@@ -11,23 +15,34 @@ interface AuthState {
   loadToken: () => void;
 }
 
-const useAuthStore = create<AuthState>((set, get) => ({
+const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
   isAuthenticated: false,
   setToken: (token: string) => {
-    sessionStorage.setItem('authToken', token);
+    if (isBrowser()) {
+      sessionStorage.setItem('authToken', token);
+    }
+
     set({ token, isAuthenticated: true });
   },
   setUser: (user: User) => {
     set({ user });
   },
   logout: () => {
-    sessionStorage.removeItem('authToken');
+    if (isBrowser()) {
+      sessionStorage.removeItem('authToken');
+    }
+
     set({ token: null, user: null, isAuthenticated: false });
   },
   loadToken: () => {
+    if (!isBrowser()) {
+      return;
+    }
+
     const token = sessionStorage.getItem('authToken');
+
     if (token) {
       set({ token, isAuthenticated: true });
     }
@@ -35,6 +50,8 @@ const useAuthStore = create<AuthState>((set, get) => ({
 }));
 
 // Carrega o token da sessão quando a aplicação inicia
-useAuthStore.getState().loadToken();
+if (isBrowser()) {
+  useAuthStore.getState().loadToken();
+}
 
 export default useAuthStore;

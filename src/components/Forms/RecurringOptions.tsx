@@ -24,12 +24,12 @@ const RecurringOptions: React.FC<RecurringOptionsProps> = ({
   fixedType
 }) => {
   return (
-    <div className="bg-indigo-50 p-4 rounded-lg">
+    <div className="theme-panel-accent p-4">
       <div className="flex items-start mb-3">
-        <Repeat size={20} className="text-indigo-600 mr-2 mt-0.5 flex-shrink-0" />
+        <Repeat size={20} className="theme-text-accent mr-2 mt-0.5 flex-shrink-0" />
         <div>
-          <h4 className="font-medium text-indigo-800">Agendamento Fixo</h4>
-          <p className="text-sm text-indigo-600 mt-1">
+          <h4 className="theme-text-primary font-medium">Agendamento Fixo</h4>
+          <p className="theme-text-accent mt-1 text-sm">
             Deseja que este agendamento se repita automaticamente?
           </p>
         </div>
@@ -41,9 +41,9 @@ const RecurringOptions: React.FC<RecurringOptionsProps> = ({
           id="recurring"
           checked={isRecurring}
           onChange={(e) => onRecurringChange(e.target.checked)}
-          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+          className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
         />
-        <label htmlFor="recurring" className="ml-2 text-sm font-medium text-gray-700">
+        <label htmlFor="recurring" className="theme-text-secondary ml-2 text-sm font-medium">
           Sim, tornar este agendamento fixo
         </label>
       </div>
@@ -59,9 +59,9 @@ const RecurringOptions: React.FC<RecurringOptionsProps> = ({
                 value={fixedType.toLowerCase()}
                 checked={true}
                 readOnly
-                className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                className="h-4 w-4 border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
               />
-              <label htmlFor={fixedType.toLowerCase()} className="ml-2 text-sm font-medium text-gray-700">
+              <label htmlFor={fixedType.toLowerCase()} className="theme-text-secondary ml-2 text-sm font-medium">
                 {fixedType === 'weekly'
                   ? 'Semanalmente (mesmo dia da semana)'
                   : 'Mensalmente (mesmo dia do mês)'
@@ -71,13 +71,13 @@ const RecurringOptions: React.FC<RecurringOptionsProps> = ({
           )}
           
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">
+            <label className="theme-text-secondary mb-2 block text-sm font-medium">
               Por quanto tempo deseja manter o agendamento fixo?
             </label>
             <select
               value={recurringDuration}
               onChange={(e) => onDurationChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="theme-input px-3 py-2"
             >
               {RECURRING_DURATION_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>

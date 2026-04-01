@@ -6,19 +6,25 @@ interface SportSelectorProps {
   sports: Sport[];
   selectedSportId: number | null;
   onSelectSport: (id: number) => void;
+  stickyTitle?: boolean;
+  stickyTopClassName?: string;
 }
 
 const SportSelector: React.FC<SportSelectorProps> = ({
   sports,
   selectedSportId,
-  onSelectSport
+  onSelectSport,
+  stickyTitle = false,
+  stickyTopClassName = ''
 }) => {
   return (
-    <div className="mt-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-        <Trophy size={20} className="text-indigo-600 mr-2" />
-        Qual esporte você quer jogar?
-      </h3>
+    <div className="mt-6" id="sport-selector-section">
+      <div className={stickyTitle ? `sticky z-20 bg-[var(--color-background)] py-2 ${stickyTopClassName}` : 'mb-4'}>
+        <h3 className="theme-text-primary flex items-center text-lg font-semibold">
+          <Trophy size={20} className="theme-text-accent mr-2" />
+          Qual esporte você quer jogar?
+        </h3>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {sports.map((sport) => (
           <button
@@ -27,8 +33,8 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             className={`
               py-3 px-4 rounded-lg text-center transition-all font-medium
               ${selectedSportId === sport.id
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+                ? 'bg-[var(--color-primary)] text-white'
+                : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_12%,transparent)]'
               }
             `}
           >
