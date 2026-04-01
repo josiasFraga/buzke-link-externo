@@ -105,6 +105,14 @@ function isUsernameLanding(identifier: string) {
   }
 }
 
+function buildAbsoluteUrl(pathOrUrl: string, siteUrl: string) {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  return new URL(pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`, siteUrl).toString();
+}
+
 async function getPageData(params: ServicePageProps['params']) {
   const usernameLanding = isUsernameLanding(params.username);
   const company = usernameLanding
@@ -125,6 +133,7 @@ async function getPageData(params: ServicePageProps['params']) {
 }
 
 export async function generateMetadata({ params }: ServicePageProps): Promise<Metadata> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
   const data = await getPageData(params);
 
   if (!data?.company || !data.service) {
@@ -142,7 +151,11 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
   const description = buildServiceSeoDescription(data.company, data.service);
   const title = buildServiceTitle(data.company, data.service);
   const canonicalPath = `/${canonicalUsername}/${canonicalServiceSlug}`;
-  const ogImagePath = `${canonicalPath}/opengraph-image`;
+  const canonicalUrl = buildAbsoluteUrl(canonicalPath, siteUrl);
+  const ogImageUrl = buildAbsoluteUrl(
+    data.service.images?.[0] || `${canonicalPath}/opengraph-image`,
+    siteUrl
+  );
   const keywords = buildServiceKeywords(data.company, data.service);
 
   return {
@@ -150,20 +163,20 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
     description,
     keywords,
     alternates: {
-      canonical: canonicalPath,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title,
       description,
       type: 'website',
-      url: canonicalPath,
-      images: [{ url: ogImagePath }],
+      url: canonicalUrl,
+      images: [{ url: ogImageUrl }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [ogImagePath],
+      images: [ogImageUrl],
     },
   };
 }

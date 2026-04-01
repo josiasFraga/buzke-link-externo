@@ -104,6 +104,14 @@ function isUsernameLanding(identifier: string) {
   }
 }
 
+function buildAbsoluteUrl(pathOrUrl: string, siteUrl: string) {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  return new URL(pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`, siteUrl).toString();
+}
+
 export async function generateStaticParams() {
   const [usernames, slugs] = await Promise.all([
     getEligibleBusinessUsernames(),
@@ -136,6 +144,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: CompanyPageProps): Promise<Metadata> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
   const usernameLanding = isUsernameLanding(params.username);
   const company = usernameLanding
     ? await getCompanyByUsername(params.username)
@@ -156,14 +165,16 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
   if (usernameLanding) {
     const description = buildCompanyLandingDescription(company);
     const title = `${company.name} | Conheça a empresa`;
-    const ogImagePath = `${canonicalSlugPath || `/${params.username}`}/opengraph-image`;
+    const canonicalPath = canonicalSlugPath || `/${params.username}`;
+    const canonicalUrl = buildAbsoluteUrl(canonicalPath, siteUrl);
+    const ogImageUrl = buildAbsoluteUrl(company.logo || `${canonicalPath}/opengraph-image`, siteUrl);
 
     return {
       title,
       description,
       alternates: canonicalSlugPath
         ? {
-            canonical: canonicalSlugPath,
+            canonical: canonicalUrl,
           }
         : undefined,
       robots: {
@@ -174,13 +185,14 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
         title,
         description,
         type: 'website',
-        images: [{ url: ogImagePath }],
+        url: canonicalUrl,
+        images: [{ url: ogImageUrl }],
       },
       twitter: {
         card: 'summary_large_image',
         title,
         description,
-        images: [ogImagePath],
+        images: [ogImageUrl],
       },
     };
   }
@@ -191,7 +203,8 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
   const title = buildCompanyTitle(company);
   const location = getLocationLabel(company);
   const canonicalPath = canonicalSlugPath || `/${params.username}`;
-  const ogImagePath = `${canonicalPath}/opengraph-image`;
+  const canonicalUrl = buildAbsoluteUrl(canonicalPath, siteUrl);
+  const ogImageUrl = buildAbsoluteUrl(company.logo || `${canonicalPath}/opengraph-image`, siteUrl);
   const keywords = [
     company.name,
     ...(company.categories || []),
@@ -204,20 +217,20 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
     description,
     keywords,
     alternates: {
-      canonical: canonicalSlugPath || `/${params.username}`,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title,
       description,
       type: 'website',
-      url: canonicalPath,
-      images: [{ url: ogImagePath }],
+      url: canonicalUrl,
+      images: [{ url: ogImageUrl }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [ogImagePath],
+      images: [ogImageUrl],
     },
   };
 }
