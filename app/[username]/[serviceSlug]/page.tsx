@@ -6,7 +6,6 @@ import {
   getCompanyBySlug,
   getCompanyByUsername,
   getServiceByIdOrSlug,
-  getTodayDateInSaoPaulo,
 } from '../../../src/lib/buzke-api';
 
 export const revalidate = 300;
@@ -103,53 +102,53 @@ export default async function ServicePage({ params }: ServicePageProps) {
     redirect(`/${data.company.slug}/${data.service.slug || params.serviceSlug}`);
   }
 
-  const initialSelectedDate = getTodayDateInSaoPaulo();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
   const serviceSlug = data.service.slug || params.serviceSlug;
   const serviceUrl = `${siteUrl}/${data.company.slug || params.username}/${serviceSlug}`;
   const description = buildServiceSeoDescription(data.company, data.service);
 
-  const structuredData = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Service',
-      name: data.service.name,
-      description,
-      image: data.service.images?.[0] || data.company.logo || data.company.coverPhoto,
-      provider: {
-        '@type': 'LocalBusiness',
-        name: data.company.name,
-        url: `${siteUrl}/${data.company.slug || params.username}`,
-      },
-      offers: data.service.price > 0
-        ? {
-            '@type': 'Offer',
-            price: data.service.price,
-            priceCurrency: 'BRL',
-            url: serviceUrl,
-          }
-        : undefined,
-      url: serviceUrl,
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        {
-          '@type': 'ListItem',
-          position: 1,
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Service',
+        name: data.service.name,
+        description,
+        image: data.service.images?.[0] || data.company.logo || data.company.coverPhoto,
+        provider: {
+          '@type': 'LocalBusiness',
           name: data.company.name,
-          item: `${siteUrl}/${data.company.slug || params.username}`,
+          url: `${siteUrl}/${data.company.slug || params.username}`,
         },
-        {
-          '@type': 'ListItem',
-          position: 2,
-          name: data.service.name,
-          item: serviceUrl,
-        },
-      ],
-    },
-  ];
+        offers: data.service.price > 0
+          ? {
+              '@type': 'Offer',
+              price: data.service.price,
+              priceCurrency: 'BRL',
+              url: serviceUrl,
+            }
+          : undefined,
+        url: serviceUrl,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: data.company.name,
+            item: `${siteUrl}/${data.company.slug || params.username}`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: data.service.name,
+            item: serviceUrl,
+          },
+        ],
+      },
+    ],
+  };
 
   return (
     <>
@@ -161,7 +160,6 @@ export default async function ServicePage({ params }: ServicePageProps) {
         key={data.service.id}
         company={data.company}
         service={data.service}
-        initialSelectedDate={initialSelectedDate}
       />
     </>
   );

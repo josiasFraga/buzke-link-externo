@@ -11,7 +11,7 @@ import { useCompanyStore } from '../store/companyStore';
 interface CompanyBookingPageClientProps {
   company: Company;
   initialServices: Service[];
-  initialSelectedDate: string;
+  initialSelectedDate?: string | null;
 }
 
 function CompanyBookingPageClient({ company, initialServices, initialSelectedDate }: CompanyBookingPageClientProps) {

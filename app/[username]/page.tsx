@@ -244,7 +244,6 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
       <CompanyBookingPageClient
         company={company}
         initialServices={initialServices}
-        initialSelectedDate={initialSelectedDate}
       />
     </>
   );

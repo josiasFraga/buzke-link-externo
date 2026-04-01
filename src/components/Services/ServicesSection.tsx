@@ -12,7 +12,7 @@ interface ServicesSectionProps {
   onSelectService: (service: Service) => void;
   getServiceHref?: (service: Service) => string;
   isLoading: boolean;
-  selectedDate: string;
+  selectedDate: string | null;
   onDateChange: (date: string) => void;
 }
 
@@ -101,7 +101,7 @@ const ServicesSection = ({
               <span className="font-medium">
                 {selectedDate 
                   ? `Disponível em ${formatDate(moment(selectedDate), 'short')}` 
-                  : 'Disponível Hoje'}
+                  : 'Selecione uma data'}
               </span>
               <ChevronDown size={16} className="ml-2" />
             </button>
@@ -116,8 +116,7 @@ const ServicesSection = ({
                       onClick={() => handleDateSelect(date)}
                       className={`
                         rounded-lg px-3 py-2 text-center transition-colors
-                        ${isToday(date) ? 'theme-panel-accent theme-text-accent font-medium' : 'theme-surface-muted theme-text-secondary'}
-                        ${selectedDate === formatDateYYYYMMDD(date) ? 'border-[var(--color-primary)]' : ''}
+                        ${selectedDate === formatDateYYYYMMDD(date) ? 'theme-panel-accent theme-text-accent border-[var(--color-primary)] font-medium' : 'theme-surface-muted theme-text-secondary'}
                       `}
                     >
                       <div className="text-sm font-medium">
@@ -134,7 +133,15 @@ const ServicesSection = ({
           </div>
         </div>
         
-        {services.length === 0 ? (
+        {!selectedDate ? (
+          <div className="theme-panel-accent p-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)]">
+              <Calendar size={24} className="theme-text-accent" />
+            </div>
+            <h3 className="theme-text-primary mb-2 text-xl font-bold">Selecione uma Data</h3>
+            <p className="theme-text-secondary mb-4">Escolha uma data para ver os serviços disponíveis para agendamento.</p>
+          </div>
+        ) : services.length === 0 ? (
           <div className="theme-panel-warning p-8 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-warning-text)_20%,transparent)]">
               <Calendar size={24} className="theme-text-warning" />

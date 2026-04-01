@@ -3,7 +3,7 @@ import { AppleLogo, GooglePlayLogo } from '../Icons/StoreIcons';
 
 const BuzkeAppPromotion: React.FC = () => {
   return (
-    <section className="theme-gradient-accent px-4 py-12 text-white">
+    <section className="theme-app-promo-section px-4 py-12 text-white">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-white max-w-xl">

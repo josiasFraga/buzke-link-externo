@@ -15,13 +15,13 @@ import LoadingScreen from './LoadingScreen';
 interface ServiceBookingPageClientProps {
   company: Company;
   service: Service;
-  initialSelectedDate: string;
+  initialSelectedDate?: string | null;
 }
 
 function ServiceBookingPageClient({ company, service, initialSelectedDate }: ServiceBookingPageClientProps) {
   const { setCompany, clearCompany } = useCompanyStore();
   const bookingFlowSectionRef = useRef<HTMLDivElement>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate);
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate ?? null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [selectedTimeSlotData, setSelectedTimeSlotData] = useState<TimeSlot | null>(null);

@@ -166,7 +166,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
         </div>
       </div>
       
-      <div className="theme-card mb-6 border-[var(--color-border)] p-6 text-left">
+      <div className="theme-app-promo-card mb-6 border-[var(--color-border)] p-6 text-left">
         <div className="flex">
           <div className="mr-4">
             <div className="theme-panel-accent flex h-12 w-12 items-center justify-center rounded-full">

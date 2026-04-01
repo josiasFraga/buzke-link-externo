@@ -181,9 +181,8 @@ const DatePicker: React.FC<DatePickerProps> = ({
                 disabled={isPastDate(day)}
                 className={`
                   w-10 h-10 rounded-full flex items-center justify-center text-sm
-                  ${isPastDate(day) ? 'text-[var(--color-border-strong)] cursor-not-allowed' : 'hover:bg-[color:color-mix(in_srgb,var(--color-primary)_14%,transparent)]'}
-                  ${isSelected(day) ? 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]' : ''}
-                  ${isToday(day) && !isSelected(day) ? 'border border-[var(--color-primary)] text-[var(--color-primary)]' : ''}
+                  ${isPastDate(day) ? 'bg-[var(--color-disabled-date-bg)] text-[var(--color-disabled-date-text)] cursor-not-allowed' : 'hover:bg-[color:color-mix(in_srgb,var(--color-primary)_14%,transparent)]'}
+                  ${isSelected(day) ? 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]' : !isPastDate(day) ? 'theme-text-primary' : ''}
                   transition-colors
                 `}
               >

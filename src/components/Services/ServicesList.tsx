@@ -17,7 +17,7 @@ interface ServicesListProps {
   onSelectService: (service: Service) => void;
   getServiceHref?: (service: Service) => string;
   initialServices?: Service[];
-  initialSelectedDate?: string;
+  initialSelectedDate?: string | null;
 }
 
 interface RawServicePhoto {
@@ -47,12 +47,10 @@ const ServicesList: React.FC<ServicesListProps> = ({
   initialServices = [],
   initialSelectedDate,
 }) => {
-  const [services, setServices] = useState<Service[]>(initialServices);
-  const [isLoading, setIsLoading] = useState(initialServices.length === 0);
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return initialSelectedDate || moment().format('YYYY-MM-DD');
-  });
-  const [hasConsumedInitialData, setHasConsumedInitialData] = useState(initialServices.length > 0);
+  const [services, setServices] = useState<Service[]>(() => (initialSelectedDate ? initialServices : []));
+  const [isLoading, setIsLoading] = useState(Boolean(initialSelectedDate && initialServices.length === 0));
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate || null);
+  const [hasConsumedInitialData, setHasConsumedInitialData] = useState(Boolean(initialSelectedDate && initialServices.length > 0));
 
   const formatDuration = (duration: string): string => {
     const [hours, minutes] = duration.split(':').map(Number);
@@ -114,6 +112,12 @@ const ServicesList: React.FC<ServicesListProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!selectedDate) {
+      setServices([]);
+      setIsLoading(false);
+      return;
+    }
+
     if (hasConsumedInitialData && selectedDate === initialSelectedDate) {
       setHasConsumedInitialData(false);
       setIsLoading(false);

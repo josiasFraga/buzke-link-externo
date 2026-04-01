@@ -5,6 +5,7 @@
 :root {
   --color-primary: #554eb9;
   --color-primary-hover: #6f61ff;
+  --color-accent-foreground: #554eb9;
   --color-secondary: #9388bc;
   --color-complementary: #b95a55;
   --color-background: #f9fafb;
@@ -21,6 +22,8 @@
   --color-button-secondary-text: #333333;
   --color-inactive: rgba(85, 78, 185, 0.1);
   --color-inactive-text: #8daece;
+  --color-disabled-date-bg: #eef3f8;
+  --color-disabled-date-text: #9aa9b8;
   --color-success-bg: #e7f8f1;
   --color-success-text: #1fa669;
   --color-warning-bg: #fff9db;
@@ -46,6 +49,7 @@
 html[data-theme='dark'] {
   --color-primary: #554eb9;
   --color-primary-hover: #6f61ff;
+  --color-accent-foreground: #9ba6ff;
   --color-secondary: #462f8a;
   --color-complementary: #ff6f61;
   --color-background: #0f1a24;
@@ -56,12 +60,14 @@ html[data-theme='dark'] {
   --color-border: #2e4e6b;
   --color-border-strong: #426887;
   --color-text-primary: #ffffff;
-  --color-text-secondary: #8daece;
-  --color-text-tertiary: #999999;
+  --color-text-secondary: #bdd3e8;
+  --color-text-tertiary: #9fb4c9;
   --color-button-text: #ffffff;
   --color-button-secondary-text: #f7f7f7;
   --color-inactive: rgba(85, 78, 185, 0.1);
-  --color-inactive-text: #8daece;
+  --color-inactive-text: #a8c0d8;
+  --color-disabled-date-bg: #162534;
+  --color-disabled-date-text: #5f7891;
   --color-success-bg: rgba(31, 166, 105, 0.2);
   --color-success-text: #a1e9cc;
   --color-warning-bg: rgba(255, 244, 204, 0.2);
@@ -154,6 +160,22 @@ label {
   box-shadow: var(--shadow-soft);
 }
 
+.theme-app-promo-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme='dark'] .theme-app-promo-card {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-info-text) 10%, var(--color-surface)),
+    color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-secondary))
+  );
+  border-color: color-mix(in srgb, var(--color-info-text) 24%, var(--color-border));
+}
+
 .theme-surface-muted {
   background: var(--color-surface-secondary);
   border: 1px solid var(--color-border);
@@ -197,7 +219,7 @@ label {
 }
 
 .theme-text-accent {
-  color: var(--color-primary);
+  color: var(--color-accent-foreground);
 }
 
 .theme-text-success {
@@ -372,6 +394,19 @@ label {
 
 .theme-gradient-accent {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+}
+
+.theme-app-promo-section {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+}
+
+html[data-theme='dark'] .theme-app-promo-section {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-info-text) 18%, #08131d),
+    color-mix(in srgb, var(--color-primary) 26%, #132536),
+    color-mix(in srgb, var(--color-hero-end) 72%, #0b1722)
+  );
 }
 
 @keyframes fadeIn {
