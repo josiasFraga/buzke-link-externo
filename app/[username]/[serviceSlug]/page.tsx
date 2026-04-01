@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import ServiceBookingPageClient from '../../../src/components/ServiceBookingPageClient';
+import type { Company, Service } from '../../../src/types';
 import {
   buildServiceSeoDescription,
   getCompanyBySlug,
   getCompanyByUsername,
+  getEligibleBusinessSlugs,
   getServiceByIdOrSlug,
+  getServiceSlugsByCompanyId,
 } from '../../../src/lib/buzke-api';
 
 export const revalidate = 300;
@@ -16,6 +19,82 @@ interface ServicePageProps {
     username: string;
     serviceSlug: string;
   };
+}
+
+function getLocationLabel(company: Company) {
+  if (!company.address?.city) {
+    return null;
+  }
+
+  return company.address.state
+    ? `${company.address.city} - ${company.address.state}`
+    : company.address.city;
+}
+
+function buildServiceTitle(company: Company, service: Service) {
+  const location = getLocationLabel(company);
+
+  return location
+    ? `${service.name} em ${company.name} | ${location}`
+    : `${service.name} | ${company.name}`;
+}
+
+function buildServiceKeywords(company: Company, service: Service) {
+  return [
+    service.name,
+    company.name,
+    service.tipo,
+    ...(company.categories || []),
+    getLocationLabel(company),
+  ].filter((value): value is string => Boolean(value));
+}
+
+function buildDurationIso(duration: string) {
+  const hoursMatch = duration.match(/(\d+)h/);
+  const minutesMatch = duration.match(/(\d+)min/);
+  const hours = Number(hoursMatch?.[1] || 0);
+  const minutes = Number(minutesMatch?.[1] || 0);
+
+  if (!hours && !minutes) {
+    return undefined;
+  }
+
+  return `PT${hours ? `${hours}H` : ''}${minutes ? `${minutes}M` : ''}`;
+}
+
+function buildSameAs(company: Company) {
+  const sameAs = new Set<string>();
+  const whatsappDigits = company.whatsapp?.replace(/\D/g, '');
+
+  if (whatsappDigits) {
+    sameAs.add(`https://wa.me/${whatsappDigits}`);
+  }
+
+  return sameAs.size ? Array.from(sameAs) : undefined;
+}
+
+export async function generateStaticParams() {
+  const companySlugs = await getEligibleBusinessSlugs();
+  const paramsNested = await Promise.all(
+    companySlugs.map(async (username) => {
+      const company = await getCompanyBySlug(username);
+
+      if (!company) {
+        return [];
+      }
+
+      const services = await getServiceSlugsByCompanyId(company.id);
+
+      return services
+        .filter((service) => service.slug)
+        .map((service) => ({
+          username,
+          serviceSlug: service.slug!,
+        }));
+    })
+  );
+
+  return paramsNested.flat();
 }
 
 function isUsernameLanding(identifier: string) {
@@ -61,13 +140,15 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
   const canonicalUsername = data.company.slug || params.username;
   const canonicalServiceSlug = data.service.slug || params.serviceSlug;
   const description = buildServiceSeoDescription(data.company, data.service);
-  const title = `${data.service.name} | ${data.company.name}`;
+  const title = buildServiceTitle(data.company, data.service);
   const image = data.service.images?.[0] || data.company.logo || data.company.coverPhoto;
   const canonicalPath = `/${canonicalUsername}/${canonicalServiceSlug}`;
+  const keywords = buildServiceKeywords(data.company, data.service);
 
   return {
     title,
     description,
+    keywords,
     alternates: {
       canonical: canonicalPath,
     },
@@ -76,13 +157,13 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
       description,
       type: 'website',
       url: canonicalPath,
-      images: image ? [{ url: image }] : undefined,
+      images: [{ url: `${canonicalPath}/opengraph-image` }],
     },
     twitter: {
       card: image ? 'summary_large_image' : 'summary',
       title,
       description,
-      images: image ? [image] : undefined,
+      images: [`${canonicalPath}/opengraph-image`],
     },
   };
 }
@@ -106,19 +187,46 @@ export default async function ServicePage({ params }: ServicePageProps) {
   const serviceSlug = data.service.slug || params.serviceSlug;
   const serviceUrl = `${siteUrl}/${data.company.slug || params.username}/${serviceSlug}`;
   const description = buildServiceSeoDescription(data.company, data.service);
+  const location = getLocationLabel(data.company);
+  const sameAs = buildSameAs(data.company);
+  const durationIso = buildDurationIso(data.service.duration);
 
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'Service',
+        '@id': `${serviceUrl}#service`,
         name: data.service.name,
         description,
         image: data.service.images?.[0] || data.company.logo || data.company.coverPhoto,
+        serviceType: data.service.tipo || data.company.categories?.[0] || undefined,
+        category: data.company.categories?.join(', ') || undefined,
+        areaServed: location
+          ? {
+              '@type': 'City',
+              name: location,
+            }
+          : undefined,
+        providerMobility: 'dynamic',
+        hoursAvailable: durationIso,
         provider: {
           '@type': 'LocalBusiness',
+          '@id': `${siteUrl}/${data.company.slug || params.username}#business`,
           name: data.company.name,
           url: `${siteUrl}/${data.company.slug || params.username}`,
+          image: data.company.logo || data.company.coverPhoto,
+          telephone: data.company.phone || data.company.whatsapp || undefined,
+          sameAs,
+          address: data.company.address
+            ? {
+                '@type': 'PostalAddress',
+                streetAddress: `${data.company.address.street}, ${data.company.address.number}`,
+                addressLocality: data.company.address.city,
+                addressRegion: data.company.address.state,
+                addressCountry: data.company.address.pais,
+              }
+            : undefined,
         },
         offers: data.service.price > 0
           ? {
@@ -126,26 +234,51 @@ export default async function ServicePage({ params }: ServicePageProps) {
               price: data.service.price,
               priceCurrency: 'BRL',
               url: serviceUrl,
+              availability: 'https://schema.org/InStock',
+            }
+          : undefined,
+        aggregateRating: data.service.rating
+          ? {
+              '@type': 'AggregateRating',
+              ratingValue: data.service.rating,
+              reviewCount: Number(data.service.reviewCount || 0),
             }
           : undefined,
         url: serviceUrl,
       },
       {
         '@type': 'BreadcrumbList',
+        '@id': `${serviceUrl}#breadcrumb`,
         itemListElement: [
           {
             '@type': 'ListItem',
             position: 1,
+            name: 'Inicio',
+            item: siteUrl,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
             name: data.company.name,
             item: `${siteUrl}/${data.company.slug || params.username}`,
           },
           {
             '@type': 'ListItem',
-            position: 2,
+            position: 3,
             name: data.service.name,
             item: serviceUrl,
           },
         ],
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${serviceUrl}#webpage`,
+        url: serviceUrl,
+        name: buildServiceTitle(data.company, data.service),
+        description,
+        isPartOf: {
+          '@id': `${siteUrl}/${data.company.slug || params.username}#business`,
+        },
       },
     ],
   };

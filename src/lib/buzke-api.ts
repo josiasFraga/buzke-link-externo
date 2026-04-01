@@ -337,11 +337,16 @@ export function buildCompanyLandingDescription(company: Company) {
 export function buildCompanySeoDescription(company: Company, services: Service[]) {
   const categories = company.categories?.slice(0, 3).join(', ');
   const highlightedServices = services.slice(0, 3).map((service) => service.name).join(', ');
+  const location = company.address?.city && company.address?.state
+    ? `${company.address.city} - ${company.address.state}`
+    : company.address?.city || null;
 
   return [
     `${company.name} no Buzke.`,
+    location ? `Agendamento online em ${location}.` : null,
     categories ? `Especialidades: ${categories}.` : null,
     highlightedServices ? `Agende online serviços como ${highlightedServices}.` : 'Agende online sem precisar baixar o app.',
+    company.media_avaliacoes !== null ? `Empresa avaliada em ${company.media_avaliacoes.toFixed(1)} de 5.` : null,
   ]
     .filter(Boolean)
     .join(' ');
@@ -349,9 +354,13 @@ export function buildCompanySeoDescription(company: Company, services: Service[]
 
 export function buildServiceSeoDescription(company: Company, service: Service) {
   const categories = company.categories?.slice(0, 3).join(', ');
+  const location = company.address?.city && company.address?.state
+    ? `${company.address.city} - ${company.address.state}`
+    : company.address?.city || null;
 
   return [
     `${service.name} em ${company.name}.`,
+    location ? `Atendimento em ${location}.` : null,
     service.description || null,
     categories ? `Especialidades da empresa: ${categories}.` : null,
     service.duration ? `Duracao estimada de ${service.duration}.` : null,

@@ -35,6 +35,16 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
     return service.price;
   }, [service.price]);
 
+  const locationLabel = useMemo(() => {
+    if (!company.address?.city) {
+      return null;
+    }
+
+    return company.address.state
+      ? `${company.address.city} - ${company.address.state}`
+      : company.address.city;
+  }, [company.address]);
+
   useEffect(() => {
     setCompany(company);
 
@@ -201,6 +211,55 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
               showServiceSummary={false}
               stickySteps
             />
+
+            <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)]">
+              <article className="theme-card p-6 sm:p-7">
+                <h2 className="theme-text-primary text-2xl font-bold">Sobre {service.name}</h2>
+                <p className="theme-text-secondary mt-3 leading-7">
+                  {service.description || `${service.name} esta disponivel para agendamento online em ${company.name}. Escolha a data, confira os horarios livres e conclua a reserva em poucos passos.`}
+                </p>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="theme-surface-muted p-4">
+                    <h3 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.12em]">Duracao</h3>
+                    <p className="theme-text-secondary mt-2 text-base font-medium">{service.duration || 'Consulte a empresa'}</p>
+                  </div>
+                  <div className="theme-surface-muted p-4">
+                    <h3 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.12em]">Valor inicial</h3>
+                    <p className="theme-text-secondary mt-2 text-base font-medium">
+                      {service.price > 0 ? `R$ ${service.price}` : 'Consulte valores'}
+                    </p>
+                  </div>
+                </div>
+              </article>
+
+              <aside className="theme-card p-6 sm:p-7">
+                <h2 className="theme-text-primary text-xl font-bold">Informacoes da empresa</h2>
+                <dl className="mt-4 space-y-4">
+                  <div>
+                    <dt className="theme-text-muted text-sm font-semibold uppercase tracking-[0.12em]">Empresa</dt>
+                    <dd className="theme-text-secondary mt-1">{company.name}</dd>
+                  </div>
+                  {company.categories?.length ? (
+                    <div>
+                      <dt className="theme-text-muted text-sm font-semibold uppercase tracking-[0.12em]">Especialidades</dt>
+                      <dd className="theme-text-secondary mt-1">{company.categories.slice(0, 4).join(', ')}</dd>
+                    </div>
+                  ) : null}
+                  {locationLabel ? (
+                    <div>
+                      <dt className="theme-text-muted text-sm font-semibold uppercase tracking-[0.12em]">Localizacao</dt>
+                      <dd className="theme-text-secondary mt-1">{locationLabel}</dd>
+                    </div>
+                  ) : null}
+                  {company.businessHours?.length ? (
+                    <div>
+                      <dt className="theme-text-muted text-sm font-semibold uppercase tracking-[0.12em]">Horario de atendimento</dt>
+                      <dd className="theme-text-secondary mt-1">{company.businessHours[0].day}: {company.businessHours[0].hours}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </aside>
+            </section>
           </div>
         </section>
       </CompanyProfile>
