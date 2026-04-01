@@ -7,7 +7,6 @@ import { buildPublicApiUrl } from '../../lib/public-api';
 import {
   mergeServicesWithSlugEntries,
   parseServiceSlugEntries,
-  slugifyServiceName,
 } from '../../lib/service-slugs';
 
 moment.locale('pt-br');
@@ -97,12 +96,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
         tipo: service.tipo
       }));
 
-      setServices(
-        mergeServicesWithSlugEntries(transformedServices, slugEntries).map((service) => ({
-          ...service,
-          slug: service.slug || slugifyServiceName(service.name) || undefined,
-        }))
-      );
+      setServices(mergeServicesWithSlugEntries(transformedServices, slugEntries));
     } catch (err) {
       console.error('Error fetching services:', err);
       setServices([]);

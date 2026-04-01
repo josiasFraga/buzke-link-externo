@@ -13,6 +13,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const slideInterval = useRef<number | null>(null);
+
+  const handleCardClick = () => {
+    if (href) {
+      return;
+    }
+
+    onSelect();
+  };
   
   // Start slideshow
   useEffect(() => {
@@ -81,62 +89,66 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
       </div>
     );
   };
+
+  const imageContent = (
+    <div className="relative h-48 overflow-hidden">
+      <img 
+        src={service.images?.[currentImageIndex]} 
+        alt={service.name} 
+        className="w-full h-full object-cover transition-transform duration-500"
+      />
+      
+      {service.images && service.images.length > 1 && (
+        <>
+          <button 
+            type="button"
+            onClick={handlePrevImage}
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button 
+            type="button"
+            onClick={handleNextImage}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
+          >
+            <ChevronRight size={20} />
+          </button>
+          <button 
+            type="button"
+            onClick={toggleFullscreen}
+            className="absolute right-2 top-2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
+          >
+            <Maximize2 size={16} />
+          </button>
+
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
+            {service.images.map((_, index) => (
+              <div 
+                key={index} 
+                className={`w-2 h-2 rounded-full ${
+                  index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
   
   return (
     <>
       <div 
         className="theme-card cursor-pointer overflow-hidden rounded-[var(--radius-button)] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
-        onClick={onSelect}
+        onClick={handleCardClick}
       >
         {/* Image Slideshow */}
-        {service.images && (
-          <div className="relative h-48 overflow-hidden">
-            <img 
-              src={service.images[currentImageIndex]} 
-              alt={service.name} 
-              className="w-full h-full object-cover transition-transform duration-500"
-            />
-            
-            {/* Image Navigation */}
-            {service.images.length > 1 && (
-              <>
-                <button 
-                  type="button"
-                  onClick={handlePrevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleNextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
-                >
-                  <ChevronRight size={20} />
-                </button>
-                <button 
-                  type="button"
-                  onClick={toggleFullscreen}
-                  className="absolute right-2 top-2 rounded-full bg-black/55 p-1 text-white transition-colors hover:bg-black/75"
-                >
-                  <Maximize2 size={16} />
-                </button>
-                
-                {/* Image Indicators */}
-                <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
-                  {service.images.map((_, index) => (
-                    <div 
-                      key={index} 
-                      className={`w-2 h-2 rounded-full ${
-                        index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        {service.images && (href ? (
+          <Link href={href} onClick={(event) => event.stopPropagation()} className="block">
+            {imageContent}
+          </Link>
+        ) : imageContent)}
         
         <div className="p-6">
           <div className="flex justify-between items-start mb-2">
