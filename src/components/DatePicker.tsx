@@ -6,13 +6,17 @@ interface DatePickerProps {
   selectedDate: string | null;
   onDateSelected?: () => void;
   timeSlotsLoaded?: boolean;
+  stickyTitle?: boolean;
+  stickyTopClassName?: string;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({ 
   onSelectDate, 
   selectedDate, 
   onDateSelected,
-  timeSlotsLoaded = false
+  timeSlotsLoaded = false,
+  stickyTitle = false,
+  stickyTopClassName = ''
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -27,6 +31,12 @@ const DatePicker: React.FC<DatePickerProps> = ({
           const scrollTo = timeSlotsSection.offsetTop - 20;
           modalElement.scrollTo({
             top: scrollTo,
+            behavior: 'smooth'
+          });
+        } else {
+          const top = timeSlotsSection.getBoundingClientRect().top + window.scrollY - 172;
+          window.scrollTo({
+            top: Math.max(top, 0),
             behavior: 'smooth'
           });
         }
@@ -129,25 +139,25 @@ const DatePicker: React.FC<DatePickerProps> = ({
   
   return (
     <div className="w-full" ref={datePickerRef}>
-      <div className="flex items-center mb-4">
-        <Calendar size={20} className="text-indigo-600 mr-2" />
-        <h3 className="text-lg font-semibold text-gray-800">Selecione a Data</h3>
+      <div className={`${stickyTitle ? `sticky z-20 bg-[var(--color-background)] py-2 ${stickyTopClassName}` : 'mb-4'} flex items-center`}>
+        <Calendar size={20} className="theme-text-accent mr-2" />
+        <h3 className="theme-text-primary text-lg font-semibold">Selecione a Data</h3>
       </div>
       
       {/* Month navigation */}
-      <div className="flex justify-between items-center mb-4 bg-gray-50 rounded-lg p-2">
+      <div className="theme-card-soft mb-4 flex items-center justify-between p-2">
         <button 
           onClick={prevMonth}
-          className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+          className="theme-secondary-btn rounded-full p-2"
         >
           <ChevronLeft size={20} />
         </button>
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="theme-text-primary text-lg font-semibold">
           {monthNames[month]} {year}
         </h3>
         <button 
           onClick={nextMonth}
-          className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+          className="theme-secondary-btn rounded-full p-2"
         >
           <ChevronRight size={20} />
         </button>
@@ -157,7 +167,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
       <div className="grid grid-cols-7 gap-1 text-center">
         {/* Day names */}
         {dayNames.map(day => (
-          <div key={day.key} className="text-sm font-medium text-gray-500 py-2">
+          <div key={day.key} className="theme-text-secondary py-2 text-sm font-medium">
             {day.label}
           </div>
         ))}
@@ -171,9 +181,9 @@ const DatePicker: React.FC<DatePickerProps> = ({
                 disabled={isPastDate(day)}
                 className={`
                   w-10 h-10 rounded-full flex items-center justify-center text-sm
-                  ${isPastDate(day) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-indigo-100'}
-                  ${isSelected(day) ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}
-                  ${isToday(day) && !isSelected(day) ? 'border border-indigo-600 text-indigo-600' : ''}
+                  ${isPastDate(day) ? 'text-[var(--color-border-strong)] cursor-not-allowed' : 'hover:bg-[color:color-mix(in_srgb,var(--color-primary)_14%,transparent)]'}
+                  ${isSelected(day) ? 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]' : ''}
+                  ${isToday(day) && !isSelected(day) ? 'border border-[var(--color-primary)] text-[var(--color-primary)]' : ''}
                   transition-colors
                 `}
               >

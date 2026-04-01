@@ -22,10 +22,10 @@ const BusinessHoursModal = ({ isOpen, onClose, businessHours }: BusinessHoursMod
             key={index} 
             className={`flex justify-between items-center p-3 rounded-lg ${
               item.day === 'Domingo' 
-                ? 'bg-red-50 text-red-800' 
+                ? 'theme-panel-error theme-text-danger' 
                 : index % 2 === 0 
-                  ? 'bg-gray-50' 
-                  : 'bg-white'
+                  ? 'theme-card-soft theme-text-primary' 
+                  : 'theme-card theme-text-primary'
             }`}
           >
             <div className="font-medium">{item.day}</div>
@@ -34,16 +34,16 @@ const BusinessHoursModal = ({ isOpen, onClose, businessHours }: BusinessHoursMod
         ))}
       </div>
       
-      <div className="mt-6 bg-indigo-50 p-4 rounded-lg">
+      <div className="theme-panel-accent mt-6 p-4">
         <div className="flex items-start">
-          <div className="bg-indigo-100 rounded-full p-2 mr-3">
-            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <div className="mr-3 rounded-full bg-[color:color-mix(in_srgb,var(--color-primary)_18%,transparent)] p-2">
+            <svg className="theme-text-accent h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <h4 className="font-medium text-indigo-800">Observações</h4>
-            <p className="text-sm text-indigo-600 mt-1">
+            <h4 className="theme-text-primary font-medium">Observações</h4>
+            <p className="theme-text-secondary mt-1 text-sm">
               Em feriados nacionais, nosso estabelecimento permanece fechado. Agendamentos podem ser feitos online 24 horas por dia, 7 dias por semana.
             </p>
           </div>

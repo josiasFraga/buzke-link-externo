@@ -169,7 +169,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div id="confirmation-step-section" className="space-y-6">
       {selectedTimeSlotData?.enable_fixed_scheduling && (
         <RecurringOptions isRecurring={isRecurring} recurringDuration={recurringDuration} onRecurringChange={setIsRecurring} onDurationChange={setRecurringDuration} fixedType={selectedTimeSlotData?.fixed_type} />
       )}
@@ -178,31 +178,31 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       )}
       <VoucherInput voucherCode={voucherCode} onVoucherCodeChange={setVoucherCode} onApplyVoucher={handleApplyVoucher} isLoading={isApplyingVoucher} error={voucherError} successMessage={voucherSuccessMessage} />
       
-      <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
+      <div className="theme-panel-accent mt-6 p-4">
         <div className="flex items-start">
-          <Calendar size={20} className="text-indigo-600 mr-3 mt-0.5" />
+          <Calendar size={20} className="theme-text-accent mr-3 mt-0.5" />
           <div>
-            <h4 className="font-bold text-gray-800">{selectedService.name}</h4>
-            <p className="text-sm text-gray-600 mt-1">
+            <h4 className="theme-text-primary font-bold">{selectedService.name}</h4>
+            <p className="theme-text-secondary mt-1 text-sm">
               {moment(selectedDate).format('dddd, DD [de] MMMM [de] YYYY')} às {selectedTimeSlotData.time}
             </p>
             <div className="mt-2">
               {appliedVoucher ? (
                 <div className="flex items-center gap-2">
-                  <span className="line-through text-gray-500">R$ {selectedTimeSlotData.default_value.toFixed(2)}</span>
-                  <span className="text-lg font-medium text-green-600">R$ {totalPrice.toFixed(2)}</span>
+                  <span className="theme-text-muted line-through">R$ {selectedTimeSlotData.default_value.toFixed(2)}</span>
+                  <span className="theme-text-success text-lg font-medium">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               ) : (
-                <p className="text-lg font-medium text-indigo-600">R$ {totalPrice.toFixed(2)}</p>
+                <p className="theme-text-accent text-lg font-medium">R$ {totalPrice.toFixed(2)}</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+      {error && <p className="theme-text-danger mt-2 text-sm">{error}</p>}
 
-      <button onClick={handleConfirmBooking} disabled={isLoading} className="w-full py-3 px-4 rounded-lg text-white font-medium bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors">
+      <button onClick={handleConfirmBooking} disabled={isLoading} className="theme-primary-btn w-full px-4 py-3 font-medium">
         {isLoading ? 'Confirmando...' : 'Concluir Agendamento'}
       </button>
     </div>

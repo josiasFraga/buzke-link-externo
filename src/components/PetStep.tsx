@@ -93,7 +93,7 @@ const PetStep: React.FC<PetStepProps> = ({ onPetSelected }) => {
   if (error) return <div className="text-red-600">{error}</div>;
 
   return (
-    <div className="space-y-6">
+    <div id="pet-step-section" className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-gray-800 mb-4">Selecione o Pet</h3>
         <div className="space-y-3">

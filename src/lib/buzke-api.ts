@@ -1,4 +1,9 @@
 import { Company, Service } from '../types';
+import {
+  mergeServicesWithSlugEntries,
+  parseServiceSlugEntries,
+  slugifyServiceName,
+} from './service-slugs';
 
 const DEFAULT_COVER_PHOTO = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&h=400&q=80';
 const WEEK_DAYS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'] as const;
@@ -55,6 +60,7 @@ interface RawServicePhoto {
 
 interface RawService {
   id: number | string;
+  slug?: string;
   nome: string;
   descricao: string;
   horarios_atendimento?: RawServiceSchedule[];
@@ -190,6 +196,7 @@ export function mapServiceToModel(service: RawService, companyId: string): Servi
 
   return {
     id: service.id.toString(),
+    slug: service.slug?.trim() || undefined,
     companyId,
     name: service.nome,
     description: service.descricao,
@@ -200,6 +207,43 @@ export function mapServiceToModel(service: RawService, companyId: string): Servi
     reviewCount: 0,
     tipo: service.tipo,
   };
+}
+
+export async function getServiceSlugsByCompanyId(companyId: string) {
+  try {
+    const data = await fetchFromApi<unknown>(`/services/slugs?cliente_id=${encodeURIComponent(companyId)}`);
+
+    return parseServiceSlugEntries(data);
+  } catch {
+    return [];
+  }
+}
+
+export async function getServiceByIdOrSlug(idOrSlug: string, companyId: string) {
+  const normalizedIdentifier = normalizeBusinessIdentifier(idOrSlug);
+
+  if (!normalizedIdentifier) {
+    return null;
+  }
+
+  try {
+    const data = await fetchFromApi<RawService>(`/services/${encodeURIComponent(normalizedIdentifier)}`);
+    const service = mapServiceToModel(data, companyId);
+
+    if (service.slug) {
+      return service;
+    }
+
+    const slugEntries = await getServiceSlugsByCompanyId(companyId);
+    const [serviceWithSlug] = mergeServicesWithSlugEntries([service], slugEntries);
+
+    return {
+      ...serviceWithSlug,
+      slug: serviceWithSlug.slug || slugifyServiceName(serviceWithSlug.name) || undefined,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getCompanyByUsername(username: string) {
@@ -235,9 +279,17 @@ export async function getCompanyBySlug(slug: string) {
 export async function getServicesByCompanyId(companyId: string, selectedDate: string) {
   const [year, month, day] = selectedDate.split('-');
   const formattedDate = `${day}/${month}/${year}`;
-  const data = await fetchFromApi<RawService[]>(`/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${companyId}`);
+  const [data, slugEntries] = await Promise.all([
+    fetchFromApi<RawService[]>(`/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${companyId}`),
+    getServiceSlugsByCompanyId(companyId),
+  ]);
 
-  return data.map((service) => mapServiceToModel(service, companyId));
+  const services = data.map((service) => mapServiceToModel(service, companyId));
+
+  return mergeServicesWithSlugEntries(services, slugEntries).map((service) => ({
+    ...service,
+    slug: service.slug || slugifyServiceName(service.name) || undefined,
+  }));
 }
 
 export async function getEligibleBusinessUsernames() {
@@ -290,6 +342,20 @@ export function buildCompanySeoDescription(company: Company, services: Service[]
     `${company.name} no Buzke.`,
     categories ? `Especialidades: ${categories}.` : null,
     highlightedServices ? `Agende online serviços como ${highlightedServices}.` : 'Agende online sem precisar baixar o app.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+export function buildServiceSeoDescription(company: Company, service: Service) {
+  const categories = company.categories?.slice(0, 3).join(', ');
+
+  return [
+    `${service.name} em ${company.name}.`,
+    service.description || null,
+    categories ? `Especialidades da empresa: ${categories}.` : null,
+    service.duration ? `Duracao estimada de ${service.duration}.` : null,
+    service.price > 0 ? `Agende online a partir de R$ ${service.price}.` : 'Agende online sem precisar baixar o app.',
   ]
     .filter(Boolean)
     .join(' ');

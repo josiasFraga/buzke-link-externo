@@ -157,21 +157,21 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
 
     return (
       <CompanyProfile company={company}>
-        <section id="section-services" className="bg-white px-4 py-12 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-4xl rounded-3xl border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 p-8 shadow-sm sm:p-10">
+        <section id="section-services" className="theme-page px-4 py-12 sm:px-6 lg:px-8">
+          <div className="theme-card mx-auto max-w-4xl rounded-3xl bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-background-secondary)] to-[var(--color-surface-secondary)] p-8 sm:p-10">
             <div className="max-w-2xl">
-              <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">
+              <span className="theme-panel-success inline-flex rounded-full px-3 py-1 text-sm font-medium theme-text-success">
                 Perfil da empresa
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <h2 className="theme-text-primary mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
                 Conheça a empresa e siga para o agendamento
               </h2>
-              <p className="mt-4 text-base leading-7 text-gray-600 sm:text-lg">
+              <p className="theme-text-secondary mt-4 text-base leading-7 sm:text-lg">
                 Esta página apresenta os dados públicos da empresa. Para ver os serviços disponíveis e concluir o agendamento, continue para a página oficial de reservas.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3 text-sm text-gray-600">
+              <div className="theme-text-secondary mt-6 flex flex-wrap gap-3 text-sm">
                 {company.categories?.slice(0, 4).map((category) => (
-                  <span key={category} className="rounded-full border border-gray-200 bg-white px-3 py-1.5">
+                  <span key={category} className="theme-chip rounded-full px-3 py-1.5">
                     {category}
                   </span>
                 ))}
@@ -179,11 +179,11 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
               <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <Link
                   href={`/${company.slug}`}
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-emerald-700"
+                  className="theme-primary-btn inline-flex items-center justify-center rounded-full px-6 py-3 text-base font-semibold"
                 >
                   Agendar
                 </Link>
-                <p className="text-sm text-gray-500">O agendamento será aberto em /{company.slug}</p>
+                <p className="theme-text-muted text-sm">O agendamento será aberto em /{company.slug}</p>
               </div>
             </div>
           </div>

@@ -22,8 +22,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <>
       <div>
-        <label htmlFor="email" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Mail size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="email" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Mail size={16} className="mr-2" />
           Email
         </label>
         <input
@@ -31,17 +31,15 @@ const LoginForm: React.FC<LoginFormProps> = ({
           id="email"
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-lg ${
-            errors.email ? 'border-red-500' : 'border-gray-300'
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+          className={`theme-input px-4 py-3 ${errors.email ? 'border-red-500' : ''}`}
           placeholder="seu@email.com"
         />
-        {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+        {errors.email && <p className="theme-text-danger mt-1 text-sm">{errors.email}</p>}
       </div>
 
       <div>
-        <label htmlFor="password" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Lock size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="password" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Lock size={16} className="mr-2" />
           Senha
         </label>
         <input
@@ -49,12 +47,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
           id="password"
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-lg ${
-            errors.password ? 'border-red-500' : 'border-gray-300'
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+          className={`theme-input px-4 py-3 ${errors.password ? 'border-red-500' : ''}`}
           placeholder="••••••••"
         />
-        {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
+        {errors.password && <p className="theme-text-danger mt-1 text-sm">{errors.password}</p>}
       </div>
     </>
   );

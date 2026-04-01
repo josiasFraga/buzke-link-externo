@@ -12,7 +12,7 @@ const StepIcon = ({ title, isCompleted, isActive }: { title: string; isCompleted
 
   const iconProps = {
     size: 20,
-    className: `transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500'}`,
+    className: `transition-colors duration-300 ${isActive ? 'text-white' : 'theme-text-secondary'}`,
   };
 
   switch (title) {
@@ -40,26 +40,25 @@ const BookingSteps: React.FC<BookingStepsProps> = ({ steps, currentStep }) => {
                     w-12 h-12 rounded-full flex items-center justify-center border-2
                     transition-all duration-300
                     ${isCompleted
-                      ? 'bg-green-500 border-green-600 text-white'
+                      ? 'theme-panel-success border-[var(--color-success-text)] text-[var(--color-success-text)]'
                       : isActive
-                        ? 'bg-indigo-600 border-indigo-700 text-white ring-4 ring-indigo-200'
-                        : 'bg-gray-100 border-gray-300 text-gray-500'
+                        ? 'bg-[var(--color-primary)] border-[var(--color-primary-hover)] text-white shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-primary)_18%,transparent)]'
+                        : 'bg-[var(--color-background-secondary)] border-[var(--color-border)] text-[var(--color-text-secondary)]'
                     }
                   `}
                 >
                   <StepIcon title={step.title} isCompleted={isCompleted} isActive={isActive} />
                 </div>
                 <div className="text-center mt-3">
-                  <p className={`text-sm font-bold transition-colors duration-300 ${isActive ? 'text-indigo-600' : 'text-gray-600'}`}>
+                  <p className={`text-sm font-bold transition-colors duration-300 ${isActive ? 'theme-text-accent' : 'theme-text-secondary'}`}>
                     {step.title}
                   </p>
-                  <p className="text-xs text-gray-400 hidden sm:block">{step.description}</p>
                 </div>
               </div>
 
               {index < steps.length - 1 && (
                 <div className="flex-1 mt-5">
-                  <div className={`h-1 w-full rounded-full transition-colors duration-500 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <div className={`h-1 w-full rounded-full transition-colors duration-500 ${isCompleted ? 'bg-[var(--color-success-text)]' : 'bg-[var(--color-surface-secondary)]'}`} />
                 </div>
               )}
             </React.Fragment>

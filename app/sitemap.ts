@@ -1,5 +1,9 @@
 import type { MetadataRoute } from 'next';
-import { getEligibleBusinessSlugs } from '../src/lib/buzke-api';
+import {
+  getCompanyBySlug,
+  getEligibleBusinessSlugs,
+  getServiceSlugsByCompanyId,
+} from '../src/lib/buzke-api';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
@@ -12,6 +16,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
   }));
 
+  const servicePagesNested = await Promise.all(
+    slugs.map(async (slug) => {
+      const company = await getCompanyBySlug(slug);
+
+      if (!company) {
+        return [];
+      }
+
+      const services = await getServiceSlugsByCompanyId(company.id);
+
+      return services
+        .filter((service) => service.slug)
+        .map((service) => ({
+          url: `${siteUrl}/${encodeURIComponent(slug)}/${encodeURIComponent(service.slug!)}`,
+          changeFrequency: 'daily' as const,
+          priority: 0.8,
+          lastModified: new Date(),
+        }));
+    })
+  );
+
+  const servicePages = servicePagesNested.flat();
+
   return [
     {
       url: siteUrl,
@@ -20,5 +47,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
     },
     ...companyPages,
+    ...servicePages,
   ];
 }

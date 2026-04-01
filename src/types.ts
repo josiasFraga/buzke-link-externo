@@ -36,6 +36,7 @@ export interface Professional {
 
 export interface Service {
   id: string;
+  slug?: string;
   companyId: string;
   name: string;
   description: string;

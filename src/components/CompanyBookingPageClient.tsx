@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { AppointmentSlots, Company, Service, TimeSlot } from '../types';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Company, Service } from '../types';
 import CompanyProfile from './CompanyProfile';
 import ServicesList from './Services/ServicesList';
-import BookingModal from './BookingModal';
 import LoadingScreen from './LoadingScreen';
 import { useCompanyStore } from '../store/companyStore';
-import { buildPublicApiUrl } from '../lib/public-api';
 
 interface CompanyBookingPageClientProps {
   company: Company;
@@ -16,14 +15,19 @@ interface CompanyBookingPageClientProps {
 }
 
 function CompanyBookingPageClient({ company, initialServices, initialSelectedDate }: CompanyBookingPageClientProps) {
+  const router = useRouter();
   const { setCompany, clearCompany } = useCompanyStore();
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [selectedTimeSlotData, setSelectedTimeSlotData] = useState<TimeSlot | null>(null);
-  const [appointmentData, setAppointmentData] = useState<AppointmentSlots | null>(null);
+  const priceFrom = initialServices.reduce<number | null>((lowestPrice, service) => {
+    if (!service.price || service.price <= 0) {
+      return lowestPrice;
+    }
+
+    if (lowestPrice === null) {
+      return service.price;
+    }
+
+    return Math.min(lowestPrice, service.price);
+  }, null);
 
   useEffect(() => {
     setCompany(company);
@@ -33,87 +37,27 @@ function CompanyBookingPageClient({ company, initialServices, initialSelectedDat
     };
   }, [clearCompany, company, setCompany]);
 
-  useEffect(() => {
-    if (!selectedDate || !selectedService) {
-      return;
-    }
-
-    const [year, month, day] = selectedDate.split('-');
-    const formattedDate = `${day}/${month}/${year}`;
-
-    fetch(buildPublicApiUrl(`/services/data-to-appointment?servico_id=${selectedService.id}&data=${formattedDate}`))
-      .then((response) => response.json())
-      .then((data: AppointmentSlots) => {
-        setTimeSlots(data.horarios || []);
-        setAppointmentData(data);
-      })
-      .catch((error) => {
-        console.error('Error fetching time slots:', error);
-        setTimeSlots([]);
-        setAppointmentData(null);
-      });
-  }, [selectedDate, selectedService]);
-
   const handleSelectService = (service: Service) => {
-    setSelectedService(service);
-    setIsModalOpen(true);
-    setTimeSlots([]);
-    setSelectedTimeSlot(null);
-    setSelectedTimeSlotData(null);
-    setAppointmentData(null);
-    setSelectedDate(initialSelectedDate);
+    router.push(`/${company.slug || company.id}/${service.slug || service.id}`);
   };
 
-  const handleSelectDate = (date: string) => {
-    setSelectedDate(date);
-    setTimeSlots([]);
-    setSelectedTimeSlot(null);
-    setSelectedTimeSlotData(null);
-    setAppointmentData(null);
-  };
-
-  const handleSelectTimeSlot = (timeSlotId: string) => {
-    setSelectedTimeSlot(timeSlotId);
-    const timeSlotData = timeSlots.find((slot) => slot.time === timeSlotId);
-    setSelectedTimeSlotData(timeSlotData || null);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedService(null);
-    setSelectedDate(null);
-    setSelectedTimeSlot(null);
-    setSelectedTimeSlotData(null);
-    setAppointmentData(null);
-  };
+  const getServiceHref = (service: Service) => `/${company.slug || company.id}/${service.slug || service.id}`;
 
   if (!company) {
     return <LoadingScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <CompanyProfile company={company}>
+    <div className="theme-page min-h-screen">
+      <CompanyProfile company={company} priceFrom={priceFrom}>
         <ServicesList
           companyId={company.id}
           onSelectService={handleSelectService}
+          getServiceHref={getServiceHref}
           initialServices={initialServices}
           initialSelectedDate={initialSelectedDate}
         />
       </CompanyProfile>
-
-      <BookingModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        selectedService={selectedService}
-        selectedDate={selectedDate}
-        selectedTimeSlot={selectedTimeSlot}
-        selectedTimeSlotData={selectedTimeSlotData}
-        timeSlots={timeSlots}
-        onSelectDate={handleSelectDate}
-        onSelectTimeSlot={handleSelectTimeSlot}
-        appointmentData={appointmentData}
-      />
     </div>
   );
 }

@@ -130,20 +130,20 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
 
   if (user) {
     return (
-      <div className="space-y-4">
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+      <div id="auth-step-section" className="space-y-4">
+        <div className="theme-panel-success flex items-center justify-between p-4">
           <div className="flex items-center">
             <img src={user.img} alt={user.nome} className="w-12 h-12 rounded-full mr-4" />
             <div>
-              <p className="font-bold text-gray-800">{user.nome}</p>
-              <p className="text-sm text-gray-600">{user.email}</p>
+              <p className="theme-text-primary font-bold">{user.nome}</p>
+              <p className="theme-text-secondary text-sm">{user.email}</p>
             </div>
           </div>
-          <button onClick={logout} className="text-red-500 hover:text-red-700">
+          <button onClick={logout} className="theme-text-danger transition-colors hover:opacity-80">
             <LogOut size={24} />
           </button>
         </div>
-        <button onClick={onAuthSuccess} className="w-full py-3 px-4 rounded-lg text-white font-medium bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+        <button onClick={onAuthSuccess} className="theme-primary-btn w-full px-4 py-3 font-medium">
           Continuar como {user.nome.split(' ')[0]}
         </button>
       </div>
@@ -151,12 +151,12 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form id="auth-step-section" onSubmit={handleSubmit} className="space-y-5">
       <div className="flex gap-4 mb-6">
-        <button type="button" onClick={() => setHasAccount(true)} className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${hasAccount ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button type="button" onClick={() => setHasAccount(true)} className={`flex-1 px-4 py-3 font-medium transition-colors ${hasAccount ? 'theme-primary-btn' : 'theme-secondary-btn'}`}>
           Já tenho conta
         </button>
-        <button type="button" onClick={() => setHasAccount(false)} className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${!hasAccount ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+        <button type="button" onClick={() => setHasAccount(false)} className={`flex-1 px-4 py-3 font-medium transition-colors ${!hasAccount ? 'theme-primary-btn' : 'theme-secondary-btn'}`}>
           Criar uma conta
         </button>
       </div>
@@ -167,9 +167,9 @@ const AuthStep: React.FC<AuthStepProps> = ({ onAuthSuccess }) => {
         <RegisterForm name={name} email={email} password={password} confirmPassword={confirmPassword} country={country} phonePrefix={phonePrefix} phone={phone} errors={formErrors} onNameChange={setName} onEmailChange={setEmail} onPasswordChange={setPassword} onConfirmPasswordChange={setConfirmPassword} onCountryChange={setCountry} onPhoneChange={setPhone} />
       )}
 
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+      {error && <p className="theme-text-danger mt-2 text-sm">{error}</p>}
 
-      <button type="submit" disabled={isLoading} className={`w-full py-3 px-4 rounded-lg text-white font-medium ${isLoading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition-colors shadow-sm`}>
+      <button type="submit" disabled={isLoading} className="theme-primary-btn w-full px-4 py-3 font-medium">
         {isLoading ? 'Processando...' : (hasAccount ? 'Entrar' : 'Criar Conta e Continuar')}
       </button>
     </form>

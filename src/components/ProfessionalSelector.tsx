@@ -6,17 +6,23 @@ interface ProfessionalSelectorProps {
   selectedProfessionalId: number | null;
   onSelectProfessional: (id: number) => void;
   availableProfessionals?: number[];
+  stickyTitle?: boolean;
+  stickyTopClassName?: string;
 }
 
 const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
   professionals,
   selectedProfessionalId,
   onSelectProfessional,
-  availableProfessionals = []
+  availableProfessionals = [],
+  stickyTitle = false,
+  stickyTopClassName = ''
 }) => {
   return (
-    <div className="mt-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Selecione o Profissional</h3>
+    <div className="mt-6" id="professional-selector-section">
+      <div className={stickyTitle ? `sticky z-20 bg-[var(--color-background)] py-2 ${stickyTopClassName}` : 'mb-4'}>
+        <h3 className="theme-text-primary text-lg font-semibold">Selecione o Profissional</h3>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {professionals.map((professional) => {
           const isAvailable = availableProfessionals.includes(professional.usuario.id);
@@ -29,10 +35,10 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
               className={`
                 relative p-4 rounded-lg border transition-all
                 ${selectedProfessionalId === professional.id
-                  ? 'border-indigo-600 bg-indigo-50'
+                  ? 'border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,transparent)]'
                   : isAvailable
-                    ? 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
-                    : 'border-gray-200 opacity-50 cursor-not-allowed bg-gray-50'
+                    ? 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_12%,transparent)]'
+                    : 'border-[var(--color-border)] bg-[var(--color-surface-secondary)] opacity-50 cursor-not-allowed'
                 }
               `}
             >
@@ -47,7 +53,7 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
                 {professional.usuario.nome}
               </p>
               {!isAvailable && (
-                <span className="absolute top-2 right-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                <span className="theme-panel-error theme-text-danger absolute right-2 top-2 px-2 py-1 text-xs">
                   Indisponível
                 </span>
               )}

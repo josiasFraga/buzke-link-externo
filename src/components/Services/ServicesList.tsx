@@ -4,12 +4,18 @@ import ServicesSection from './ServicesSection';
 import moment from 'moment';
 import 'moment/locale/pt-br';
 import { buildPublicApiUrl } from '../../lib/public-api';
+import {
+  mergeServicesWithSlugEntries,
+  parseServiceSlugEntries,
+  slugifyServiceName,
+} from '../../lib/service-slugs';
 
 moment.locale('pt-br');
 
 interface ServicesListProps {
   companyId: string;
   onSelectService: (service: Service) => void;
+  getServiceHref?: (service: Service) => string;
   initialServices?: Service[];
   initialSelectedDate?: string;
 }
@@ -25,6 +31,7 @@ interface RawServiceSchedule {
 
 interface RawService {
   id: number;
+  slug?: string;
   nome: string;
   descricao: string;
   horarios_atendimento: RawServiceSchedule[];
@@ -36,6 +43,7 @@ interface RawService {
 const ServicesList: React.FC<ServicesListProps> = ({
   companyId,
   onSelectService,
+  getServiceHref,
   initialServices = [],
   initialSelectedDate,
 }) => {
@@ -63,15 +71,23 @@ const ServicesList: React.FC<ServicesListProps> = ({
   const fetchServices = useCallback(async (date: string, id: string) => {
     setIsLoading(true);
     const formattedDate = moment(date).format('DD/MM/YYYY');
-    
-    const url = buildPublicApiUrl(`/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${id}`);
-    
+
+    const servicesUrl = buildPublicApiUrl(`/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${id}`);
+    const slugsUrl = buildPublicApiUrl(`/services/slugs?cliente_id=${id}`);
+
     try {
-      const response = await fetch(url);
-      const data: RawService[] = await response.json();
-      
+      const [servicesResponse, slugsResponse] = await Promise.all([
+        fetch(servicesUrl),
+        fetch(slugsUrl).catch(() => null),
+      ]);
+
+      const data: RawService[] = await servicesResponse.json();
+      const slugPayload = slugsResponse?.ok ? await slugsResponse.json() : [];
+      const slugEntries = parseServiceSlugEntries(slugPayload);
+
       const transformedServices: Service[] = data.map((service) => ({
         id: service.id.toString(),
+        slug: service.slug?.trim() || undefined,
         companyId: id,
         name: service.nome,
         description: service.descricao,
@@ -82,8 +98,13 @@ const ServicesList: React.FC<ServicesListProps> = ({
         reviewCount: 0,
         tipo: service.tipo
       }));
-      
-      setServices(transformedServices);
+
+      setServices(
+        mergeServicesWithSlugEntries(transformedServices, slugEntries).map((service) => ({
+          ...service,
+          slug: service.slug || slugifyServiceName(service.name) || undefined,
+        }))
+      );
     } catch (err) {
       console.error('Error fetching services:', err);
       setServices([]);
@@ -110,6 +131,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
     <ServicesSection
       services={services}
       onSelectService={onSelectService}
+      getServiceHref={getServiceHref}
       isLoading={isLoading}
       selectedDate={selectedDate}
       onDateChange={handleDateChange}

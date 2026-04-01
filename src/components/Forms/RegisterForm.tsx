@@ -65,15 +65,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   return (
     <>
       <div>
-        <label htmlFor="country" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Globe size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="country" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Globe size={16} className="mr-2" />
           País
         </label>
         <select
           id="country"
           value={country}
           onChange={(e) => onCountryChange(e.target.value)}
-          className="w-full px-4 py-3 border rounded-lg border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+          className="theme-input px-4 py-3"
         >
           <option value="Brasil">Brasil</option>
           <option value="Uruguai">Uruguai</option>
@@ -81,8 +81,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
       </div>
 
       <div>
-        <label htmlFor="name" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <User size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="name" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <User size={16} className="mr-2" />
           Nome Completo
         </label>
         <input
@@ -90,21 +90,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           id="name"
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-lg ${
-            errors.name ? 'border-red-500' : 'border-gray-300'
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+          className={`theme-input px-4 py-3 ${errors.name ? 'border-red-500' : ''}`}
           placeholder="João Silva"
         />
-        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+        {errors.name && <p className="theme-text-danger mt-1 text-sm">{errors.name}</p>}
       </div>
 
       <div>
-        <label htmlFor="phone" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Phone size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="phone" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Phone size={16} className="mr-2" />
           Telefone
         </label>
         <div className="flex gap-2">
-          <div className="w-24 px-2 py-3 border rounded-lg border-gray-300 bg-gray-50 text-gray-700 font-medium">
+          <div className="theme-card-soft theme-text-primary w-24 px-2 py-3 text-center font-medium">
             {phonePrefix}
           </div>
           <input
@@ -113,17 +111,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
             value={phone}
             onChange={handlePhoneChange}
             placeholder={phonePrefix === '+55' ? '(XX) XXXXX-XXXX' : 'XXXX XXXX'}
-            className={`flex-1 px-4 py-3 border rounded-lg ${
-              errors.phone ? 'border-red-500' : 'border-gray-300'
-            } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+            className={`theme-input flex-1 px-4 py-3 ${errors.phone ? 'border-red-500' : ''}`}
           />
         </div>
-        {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
+        {errors.phone && <p className="theme-text-danger mt-1 text-sm">{errors.phone}</p>}
       </div>
 
       <div>
-        <label htmlFor="email" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Mail size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="email" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Mail size={16} className="mr-2" />
           Email
         </label>
         <input
@@ -131,17 +127,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           id="email"
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-lg ${
-            errors.email ? 'border-red-500' : 'border-gray-300'
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+          className={`theme-input px-4 py-3 ${errors.email ? 'border-red-500' : ''}`}
           placeholder="seu@email.com"
         />
-        {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+        {errors.email && <p className="theme-text-danger mt-1 text-sm">{errors.email}</p>}
       </div>
 
       <div>
-        <label htmlFor="password" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Lock size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="password" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Lock size={16} className="mr-2" />
           Senha
         </label>
         <input
@@ -149,17 +143,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           id="password"
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-lg ${
-            errors.password ? 'border-red-500' : 'border-gray-300'
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+          className={`theme-input px-4 py-3 ${errors.password ? 'border-red-500' : ''}`}
           placeholder="••••••••"
         />
-        {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
+        {errors.password && <p className="theme-text-danger mt-1 text-sm">{errors.password}</p>}
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="flex items-center text-sm font-medium text-gray-700 mb-1">
-          <Lock size={16} className="mr-2 text-gray-500" />
+        <label htmlFor="confirmPassword" className="theme-text-secondary mb-1 flex items-center text-sm font-medium">
+          <Lock size={16} className="mr-2" />
           Confirmar Senha
         </label>
         <input
@@ -167,12 +159,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           id="confirmPassword"
           value={confirmPassword}
           onChange={(e) => onConfirmPasswordChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-lg ${
-            errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
+          className={`theme-input px-4 py-3 ${errors.confirmPassword ? 'border-red-500' : ''}`}
           placeholder="••••••••"
         />
-        {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>}
+        {errors.confirmPassword && <p className="theme-text-danger mt-1 text-sm">{errors.confirmPassword}</p>}
       </div>
     </>
   );
