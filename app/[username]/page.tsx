@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import buzkeLogo from '../../src/assets/logo.png';
 import CompanyBookingPageClient from '../../src/components/CompanyBookingPageClient';
 import type { Company, Service } from '../../src/types';
 import {
@@ -137,6 +138,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: CompanyPageProps): Promise<Metadata> {
   const usernameLanding = isUsernameLanding(params.username);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
   const company = usernameLanding
     ? await getCompanyByUsername(params.username)
     : await getCompanyBySlug(params.username);
@@ -190,7 +192,9 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
   const description = buildCompanySeoDescription(company, services);
   const title = buildCompanyTitle(company);
   const image = company.logo || company.coverPhoto;
+  const fallbackImage = new URL(buzkeLogo.src, siteUrl).toString();
   const location = getLocationLabel(company);
+  const canonicalPath = canonicalSlugPath || `/${params.username}`;
   const keywords = [
     company.name,
     ...(company.categories || []),
@@ -209,14 +213,14 @@ export async function generateMetadata({ params }: CompanyPageProps): Promise<Me
       title,
       description,
       type: 'website',
-      url: canonicalSlugPath || `/${params.username}`,
-      images: [{ url: `${canonicalSlugPath || `/${params.username}`}/opengraph-image` }],
+      url: canonicalPath,
+      images: [{ url: image || fallbackImage }],
     },
     twitter: {
       card: image ? 'summary_large_image' : 'summary',
       title,
       description,
-      images: [`${canonicalSlugPath || `/${params.username}`}/opengraph-image`],
+      images: [image || fallbackImage],
     },
   };
 }
