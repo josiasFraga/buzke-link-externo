@@ -8,6 +8,7 @@ import {
 } from '../../../src/lib/buzke-api';
 
 export const alt = 'Buzke servico';
+export const runtime = 'nodejs';
 export const size = {
   width: 1200,
   height: 630,
@@ -20,6 +21,23 @@ function isUsernameLanding(identifier: string) {
     return decodeURIComponent(identifier).trim().startsWith('@');
   } catch {
     return identifier.trim().startsWith('@');
+  }
+}
+
+async function imageUrlToDataUrl(url: string) {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/png';
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
+  } catch {
+    return null;
   }
 }
 
@@ -45,6 +63,7 @@ export default async function OpenGraphImage({ params }: { params: { username: s
       : company.address.city
     : 'Agendamento online';
   const mediaUrl = service.images?.[0] || company.logo || company.coverPhoto || new URL(buzkeLogo.src, siteUrl).toString();
+  const mediaDataUrl = await imageUrlToDataUrl(mediaUrl);
   const description = service.description || `Reserve ${service.name} com confirmacao online pelo Buzke.`;
 
   return new ImageResponse(
@@ -105,11 +124,17 @@ export default async function OpenGraphImage({ params }: { params: { username: s
 
           <div style={{ display: 'flex', width: '40%', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ display: 'flex', width: '100%', height: '100%', maxHeight: '518px', borderRadius: '34px', overflow: 'hidden', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 80px rgba(0,0,0,0.28)' }}>
-              <img
-                src={mediaUrl}
-                alt={service.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+              {mediaDataUrl ? (
+                <img
+                  src={mediaDataUrl}
+                  alt={service.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, rgba(102,193,242,0.2), rgba(155,166,255,0.16))', fontSize: '120px', fontWeight: 900, color: '#ffffff' }}>
+                  B
+                </div>
+              )}
             </div>
           </div>
         </div>

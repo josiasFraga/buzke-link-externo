@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
 import { AppointmentSlots, Company, Service, TimeSlot } from '../types';
 import { useCompanyStore } from '../store/companyStore';
 import { buildPublicApiUrl } from '../lib/public-api';
@@ -26,6 +26,8 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [selectedTimeSlotData, setSelectedTimeSlotData] = useState<TimeSlot | null>(null);
   const [appointmentData, setAppointmentData] = useState<AppointmentSlots | null>(null);
+  const [isImageFullscreen, setIsImageFullscreen] = useState(false);
+  const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
 
   const priceFrom = useMemo(() => {
     if (!service.price || service.price <= 0) {
@@ -110,6 +112,43 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
     setSelectedTimeSlotData(timeSlotData || null);
   };
 
+  const openImageFullscreen = (imageIndex = 0) => {
+    if (!service.images?.length) {
+      return;
+    }
+
+    setFullscreenImageIndex(imageIndex);
+    setIsImageFullscreen(true);
+  };
+
+  const closeImageFullscreen = () => {
+    setIsImageFullscreen(false);
+  };
+
+  const showPreviousImage = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!service.images?.length) {
+      return;
+    }
+
+    setFullscreenImageIndex((currentIndex) =>
+      currentIndex === 0 ? service.images!.length - 1 : currentIndex - 1
+    );
+  };
+
+  const showNextImage = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (!service.images?.length) {
+      return;
+    }
+
+    setFullscreenImageIndex((currentIndex) =>
+      currentIndex === service.images!.length - 1 ? 0 : currentIndex + 1
+    );
+  };
+
   if (!company) {
     return <LoadingScreen />;
   }
@@ -167,7 +206,11 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
 
               <div className="mt-6 flex flex-col gap-4 sm:mt-7 sm:flex-row sm:items-start sm:gap-5">
                 {service.images?.[0] ? (
-                  <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_40%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.12)] sm:h-32 sm:w-32">
+                  <button
+                    type="button"
+                    onClick={() => openImageFullscreen(0)}
+                    className="group relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_40%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.12)] transition-transform hover:scale-[1.02] sm:h-32 sm:w-32"
+                  >
                     <Image
                       src={service.images[0]}
                       alt={service.name}
@@ -175,7 +218,11 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
                       sizes="(max-width: 640px) 112px, 128px"
                       className="object-cover"
                     />
-                  </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                    <div className="absolute bottom-2 right-2 rounded-full bg-black/60 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      <Maximize2 size={16} />
+                    </div>
+                  </button>
                 ) : null}
 
                 <div className="min-w-0 flex-1">
@@ -264,6 +311,53 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
           </div>
         </section>
       </CompanyProfile>
+
+      {isImageFullscreen && service.images?.[fullscreenImageIndex] ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4" onClick={closeImageFullscreen}>
+          <div className="relative max-h-[92vh] w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
+            <img
+              src={service.images[fullscreenImageIndex]}
+              alt={`${service.name} ${fullscreenImageIndex + 1}`}
+              className="max-h-[92vh] w-full rounded-2xl object-contain"
+            />
+
+            {service.images.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={showPreviousImage}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white transition-colors hover:bg-white/35"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white transition-colors hover:bg-white/35"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={closeImageFullscreen}
+              className="absolute right-4 top-4 rounded-full bg-white/20 p-2 text-white transition-colors hover:bg-white/35"
+            >
+              <X size={24} />
+            </button>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent px-6 py-5 text-white">
+              <div className="text-lg font-semibold">{service.name}</div>
+              <div className="text-sm text-white/80">
+                {service.images.length > 1
+                  ? `Foto ${fullscreenImageIndex + 1} de ${service.images.length}`
+                  : 'Toque fora da imagem para fechar'}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

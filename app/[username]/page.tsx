@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import buzkeLogo from '../../src/assets/logo.png';
 import CompanyBookingPageClient from '../../src/components/CompanyBookingPageClient';
 import type { Company, Service } from '../../src/types';
 import {
@@ -138,7 +137,6 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: CompanyPageProps): Promise<Metadata> {
   const usernameLanding = isUsernameLanding(params.username);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
   const company = usernameLanding
     ? await getCompanyByUsername(params.username)
     : await getCompanyBySlug(params.username);

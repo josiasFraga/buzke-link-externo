@@ -2,7 +2,6 @@ import { Company, Service } from '../types';
 import {
   mergeServicesWithSlugEntries,
   parseServiceSlugEntries,
-  slugifyServiceName,
 } from './service-slugs';
 
 const DEFAULT_COVER_PHOTO = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&h=400&q=80';
@@ -239,7 +238,7 @@ export async function getServiceByIdOrSlug(idOrSlug: string, companyId: string) 
 
     return {
       ...serviceWithSlug,
-      slug: serviceWithSlug.slug || slugifyServiceName(serviceWithSlug.name) || undefined,
+      slug: serviceWithSlug.slug,
     };
   } catch {
     return null;
@@ -286,10 +285,7 @@ export async function getServicesByCompanyId(companyId: string, selectedDate: st
 
   const services = data.map((service) => mapServiceToModel(service, companyId));
 
-  return mergeServicesWithSlugEntries(services, slugEntries).map((service) => ({
-    ...service,
-    slug: service.slug || slugifyServiceName(service.name) || undefined,
-  }));
+  return mergeServicesWithSlugEntries(services, slugEntries);
 }
 
 export async function getEligibleBusinessUsernames() {

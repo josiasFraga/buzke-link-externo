@@ -460,6 +460,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           ) : null}
         </div>
       )}
+
     </div>
   );
 };

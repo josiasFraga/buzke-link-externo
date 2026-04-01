@@ -59,29 +59,19 @@ export function mergeServicesWithSlugEntries(services: Service[], entries: Servi
   }
 
   const byId = new Map<string, ServiceSlugEntry>();
-  const byName = new Map<string, ServiceSlugEntry>();
 
   entries.forEach((entry) => {
-    if (entry.id) {
+    if (entry.id && entry.slug) {
       byId.set(entry.id, entry);
-    }
-
-    if (entry.name) {
-      byName.set(normalizeText(entry.name), entry);
     }
   });
 
-  const canUseIndexFallback = entries.every((entry) => entry.slug) && entries.length === services.length;
-
-  return services.map((service, index) => {
+  return services.map((service) => {
     const byServiceId = byId.get(service.id);
-    const byServiceName = byName.get(normalizeText(service.name));
-    const byIndex = canUseIndexFallback ? entries[index] : undefined;
-    const resolvedSlug = byServiceId?.slug || byServiceName?.slug || byIndex?.slug;
 
     return {
       ...service,
-      slug: resolvedSlug || service.slug,
+      slug: service.slug || byServiceId?.slug,
     };
   });
 }
