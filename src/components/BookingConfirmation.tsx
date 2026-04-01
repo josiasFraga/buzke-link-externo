@@ -79,7 +79,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   const finalPrice = calculateDiscountedPrice(service.price, appliedVoucher);
 
   return (
-    <div className="text-center">
+    <div className="mt-4 text-center sm:mt-6">
       <div className="theme-panel-success mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
         <CheckCircle className="theme-text-success h-10 w-10" />
       </div>

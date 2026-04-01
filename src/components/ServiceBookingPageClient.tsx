@@ -210,6 +210,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
               appointmentData={appointmentData}
               showServiceSummary={false}
               stickySteps
+              showSelectionSidebar
             />
 
             <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)]">

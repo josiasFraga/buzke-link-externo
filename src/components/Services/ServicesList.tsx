@@ -71,7 +71,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
     const formattedDate = moment(date).format('DD/MM/YYYY');
 
     const servicesUrl = buildPublicApiUrl(`/services/index?data=${formattedDate}&limit=50&offset=0&cliente_id=${id}`);
-    const slugsUrl = buildPublicApiUrl(`/services/slugs?cliente_id=${id}`);
+    const slugsUrl = buildPublicApiUrl(`/services/slugs?empresa=${id}`);
 
     try {
       const [servicesResponse, slugsResponse] = await Promise.all([

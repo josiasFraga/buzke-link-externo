@@ -167,14 +167,16 @@ const DatePicker: React.FC<DatePickerProps> = ({
       <div className="grid grid-cols-7 gap-1 text-center">
         {/* Day names */}
         {dayNames.map(day => (
-          <div key={day.key} className="theme-text-secondary py-2 text-sm font-medium">
-            {day.label}
+          <div key={day.key} className="flex h-10 items-center justify-center">
+            <span className="theme-text-secondary text-sm font-medium">
+              {day.label}
+            </span>
           </div>
         ))}
         
         {/* Calendar days */}
         {days.map((day, index) => (
-          <div key={`${month}-${day || `empty-${index}`}`} className="py-1">
+          <div key={`${month}-${day || `empty-${index}`}`} className="flex justify-center py-1">
             {day !== null ? (
               <button
                 onClick={() => handleDateSelect(day)}

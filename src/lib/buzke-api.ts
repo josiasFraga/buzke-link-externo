@@ -211,7 +211,7 @@ export function mapServiceToModel(service: RawService, companyId: string): Servi
 
 export async function getServiceSlugsByCompanyId(companyId: string) {
   try {
-    const data = await fetchFromApi<unknown>(`/services/slugs?cliente_id=${encodeURIComponent(companyId)}`);
+    const data = await fetchFromApi<unknown>(`/services/slugs?empresa=${encodeURIComponent(companyId)}`);
 
     return parseServiceSlugEntries(data);
   } catch {
