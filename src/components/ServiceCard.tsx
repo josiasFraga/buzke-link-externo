@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Service } from '../types';
 import { Clock, ArrowRight, Star, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTheme } from './theme/ThemeProvider';
+import { getServiceImageSources } from '../lib/service-images';
 
 interface ServiceCardProps {
   service: Service;
@@ -10,9 +12,14 @@ interface ServiceCardProps {
 }
 
 const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) => {
+  const { theme } = useTheme();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const slideInterval = useRef<number | null>(null);
+  const serviceImages = useMemo(() => getServiceImageSources(service.images, theme), [service.images, theme]);
+  const hasMultipleImages = serviceImages.length > 1;
+  const ratingValue = typeof service.rating === 'number' && Number.isFinite(service.rating) ? service.rating : undefined;
+  const reviewCount = Number(service.reviewCount || 0);
 
   const handleCardClick = () => {
     if (href) {
@@ -21,13 +28,17 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
 
     onSelect();
   };
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [service.id, theme]);
   
   // Start slideshow
   useEffect(() => {
-    if (service.images && service.images.length > 1) {
+    if (hasMultipleImages) {
       slideInterval.current = window.setInterval(() => {
         setCurrentImageIndex(prev => 
-          prev === service.images!.length - 1 ? 0 : prev + 1
+          prev === serviceImages.length - 1 ? 0 : prev + 1
         );
       }, 5000); // Change image every 5 seconds
     }
@@ -37,15 +48,15 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
         clearInterval(slideInterval.current);
       }
     };
-  }, [service.images]);
+  }, [hasMultipleImages, serviceImages]);
   
   // Handle next image
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (service.images) {
+    if (serviceImages.length) {
       setCurrentImageIndex(prev => 
-        prev === service.images!.length - 1 ? 0 : prev + 1
+        prev === serviceImages.length - 1 ? 0 : prev + 1
       );
     }
   };
@@ -54,9 +65,9 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (service.images) {
+    if (serviceImages.length) {
       setCurrentImageIndex(prev => 
-        prev === 0 ? service.images!.length - 1 : prev - 1
+        prev === 0 ? serviceImages.length - 1 : prev - 1
       );
     }
   };
@@ -70,35 +81,30 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
   
   // Render star rating
   const renderRating = () => {
-    if (!service.rating) return null;
+    if (!ratingValue || reviewCount <= 0) return null;
+
+    const formattedRating = ratingValue.toFixed(1).replace('.', ',');
     
     return (
-      <div className="flex items-center">
-        <div className="flex items-center mr-1">
-          {[1, 2, 3, 4, 5].map(star => (
-            <Star 
-              key={star} 
-              size={14} 
-              className={`${star <= Math.round(service.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--color-border-strong)]'}`} 
-            />
-          ))}
-        </div>
-        <span className="theme-text-secondary text-sm">
-          ({service.reviewCount})
-        </span>
+      <div className="theme-surface-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-1">
+        <Star size={14} className="fill-yellow-400 text-yellow-400" />
+        <span className="theme-text-primary text-sm font-semibold">{formattedRating}</span>
+        <span className="theme-text-secondary text-xs">({reviewCount})</span>
       </div>
     );
   };
 
+  const imageAlt = `Imagem do serviço ${service.name}`;
+
   const imageContent = (
     <div className="relative h-48 overflow-hidden">
       <img 
-        src={service.images?.[currentImageIndex]} 
-        alt={service.name} 
+        src={serviceImages[currentImageIndex]} 
+        alt={imageAlt} 
         className="w-full h-full object-cover transition-transform duration-500"
       />
       
-      {service.images && service.images.length > 1 && (
+      {hasMultipleImages && (
         <>
           <button 
             type="button"
@@ -123,7 +129,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
           </button>
 
           <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
-            {service.images.map((_, index) => (
+            {serviceImages.map((_, index) => (
               <div 
                 key={index} 
                 className={`w-2 h-2 rounded-full ${
@@ -136,7 +142,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
       )}
     </div>
   );
-  
+
   return (
     <>
       <div 
@@ -144,14 +150,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
         onClick={handleCardClick}
       >
         {/* Image Slideshow */}
-        {service.images && (href ? (
+        {href ? (
           <Link href={href} onClick={(event) => event.stopPropagation()} className="block">
             {imageContent}
           </Link>
-        ) : imageContent)}
+        ) : imageContent}
         
         <div className="p-6">
-          <div className="flex justify-between items-start mb-2">
+          <div className="mb-2 flex items-start justify-between gap-3">
             <h3 className="theme-text-primary text-xl font-bold">
               {href ? (
                 <Link href={href} onClick={(event) => event.stopPropagation()} className="hover:underline">
@@ -166,7 +172,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
           
           <p className="theme-text-secondary mb-6 min-h-[60px]">{service.description}</p>
           
-          <div className="flex items-center justify-between text-sm mb-4">
+          <div className="mb-4 flex items-center justify-between text-sm">
             <div className="theme-panel-accent flex items-center rounded-full px-3 py-1">
               <Clock size={16} className="mr-1" />
               <span className="font-medium">{service.duration}</span>
@@ -192,15 +198,15 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
       </div>
       
       {/* Fullscreen Image Modal */}
-      {isFullscreen && service.images && (
+      {isFullscreen && serviceImages.length > 0 && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
           onClick={toggleFullscreen}
         >
           <div className="relative w-full max-w-5xl">
             <img 
-              src={service.images[currentImageIndex]} 
-              alt={service.name} 
+              src={serviceImages[currentImageIndex]} 
+              alt={imageAlt} 
               className="w-full h-auto max-h-[90vh] object-contain"
             />
             
@@ -217,38 +223,42 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
               </svg>
             </button>
             
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePrevImage(e);
-              }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/25 p-3 text-white transition-colors hover:bg-white/50"
-            >
-              <ChevronLeft size={24} />
-            </button>
-            
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNextImage(e);
-              }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/25 p-3 text-white transition-colors hover:bg-white/50"
-            >
-              <ChevronRight size={24} />
-            </button>
-            
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-              {service.images.map((_, index) => (
-                <div 
-                  key={index} 
-                  className={`w-3 h-3 rounded-full ${
-                    index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                  }`}
-                />
-              ))}
-            </div>
+            {hasMultipleImages ? (
+              <>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevImage(e);
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/25 p-3 text-white transition-colors hover:bg-white/50"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextImage(e);
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/25 p-3 text-white transition-colors hover:bg-white/50"
+                >
+                  <ChevronRight size={24} />
+                </button>
+                
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
+                  {serviceImages.map((_, index) => (
+                    <div 
+                      key={index} 
+                      className={`w-3 h-3 rounded-full ${
+                        index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       )}

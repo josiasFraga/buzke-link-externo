@@ -3,6 +3,7 @@ import {
   mergeServicesWithSlugEntries,
   parseServiceSlugEntries,
 } from './service-slugs';
+import { getServiceRatingValue, getServiceReviewCount } from './service-rating';
 
 const DEFAULT_COVER_PHOTO = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&h=400&q=80';
 const WEEK_DAYS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'] as const;
@@ -65,6 +66,9 @@ interface RawService {
   horarios_atendimento?: RawServiceSchedule[];
   fotos?: RawServicePhoto[];
   media_avaliacoes?: number;
+  _media_avaliacoes?: number;
+  total_avaliacoes?: string | number;
+  _total_avaliacoes?: string | number;
   tipo?: string;
 }
 
@@ -201,9 +205,9 @@ export function mapServiceToModel(service: RawService, companyId: string): Servi
     description: service.descricao,
     duration: schedule ? formatDuration(schedule.duracao) : 'Consulte',
     price: schedule ? Number(schedule.valor_padrao) : 0,
-    images: (service.fotos || []).map((foto) => foto.imagem),
-    rating: service.media_avaliacoes,
-    reviewCount: 0,
+    images: (service.fotos || []).map((foto) => foto.imagem).filter(Boolean),
+    rating: getServiceRatingValue(service),
+    reviewCount: getServiceReviewCount(service),
     tipo: service.tipo,
   };
 }

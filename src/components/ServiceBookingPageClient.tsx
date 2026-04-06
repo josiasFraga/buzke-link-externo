@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Star, X } from 'lucide-react';
 import { AppointmentSlots, Company, Service, TimeSlot } from '../types';
 import { useCompanyStore } from '../store/companyStore';
 import { buildPublicApiUrl } from '../lib/public-api';
@@ -11,6 +11,8 @@ import BookingFlow from './BookingFlow';
 import CompanyProfile from './CompanyProfile';
 import PublicBookingHeader from './Header/PublicBookingHeader';
 import LoadingScreen from './LoadingScreen';
+import { useTheme } from './theme/ThemeProvider';
+import { getServiceImageSources } from '../lib/service-images';
 
 interface ServiceBookingPageClientProps {
   company: Company;
@@ -20,6 +22,7 @@ interface ServiceBookingPageClientProps {
 
 function ServiceBookingPageClient({ company, service, initialSelectedDate }: ServiceBookingPageClientProps) {
   const { setCompany, clearCompany } = useCompanyStore();
+  const { theme } = useTheme();
   const bookingFlowSectionRef = useRef<HTMLDivElement>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate ?? null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -36,6 +39,23 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
 
     return service.price;
   }, [service.price]);
+  const serviceImages = useMemo(() => getServiceImageSources(service.images, theme), [service.images, theme]);
+  const serviceRatingLabel = useMemo(() => {
+    if (typeof service.rating !== 'number' || !Number.isFinite(service.rating)) {
+      return null;
+    }
+
+    const reviewCount = Number(service.reviewCount || 0);
+
+    if (reviewCount <= 0) {
+      return null;
+    }
+
+    return {
+      rating: service.rating.toFixed(1).replace('.', ','),
+      reviewCount,
+    };
+  }, [service.rating, service.reviewCount]);
 
   const locationLabel = useMemo(() => {
     if (!company.address?.city) {
@@ -113,7 +133,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
   };
 
   const openImageFullscreen = (imageIndex = 0) => {
-    if (!service.images?.length) {
+    if (!serviceImages.length) {
       return;
     }
 
@@ -128,24 +148,24 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
   const showPreviousImage = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    if (!service.images?.length) {
+    if (!serviceImages.length) {
       return;
     }
 
     setFullscreenImageIndex((currentIndex) =>
-      currentIndex === 0 ? service.images!.length - 1 : currentIndex - 1
+      currentIndex === 0 ? serviceImages.length - 1 : currentIndex - 1
     );
   };
 
   const showNextImage = (event: React.MouseEvent) => {
     event.stopPropagation();
 
-    if (!service.images?.length) {
+    if (!serviceImages.length) {
       return;
     }
 
     setFullscreenImageIndex((currentIndex) =>
-      currentIndex === service.images!.length - 1 ? 0 : currentIndex + 1
+      currentIndex === serviceImages.length - 1 ? 0 : currentIndex + 1
     );
   };
 
@@ -205,14 +225,14 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
               </nav>
 
               <div className="mt-6 flex flex-col gap-4 sm:mt-7 sm:flex-row sm:items-start sm:gap-5">
-                {service.images?.[0] ? (
+                {serviceImages[0] ? (
                   <button
                     type="button"
                     onClick={() => openImageFullscreen(0)}
                     className="group relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_40%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.12)] transition-transform hover:scale-[1.02] sm:h-32 sm:w-32"
                   >
                     <Image
-                      src={service.images[0]}
+                      src={serviceImages[0]}
                       alt={service.name}
                       fill
                       sizes="(max-width: 640px) 112px, 128px"
@@ -229,6 +249,13 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
                   <h1 className="theme-text-primary max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">
                     {service.name}
                   </h1>
+                  {serviceRatingLabel ? (
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface-elevated)_88%,transparent)] px-3 py-1.5 shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
+                      <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                      <span className="theme-text-primary text-sm font-semibold">{serviceRatingLabel.rating}</span>
+                      <span className="theme-text-secondary text-sm">({serviceRatingLabel.reviewCount} avaliações)</span>
+                    </div>
+                  ) : null}
                   {service.description ? (
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-[color:color-mix(in_srgb,var(--color-text-primary)_88%,transparent)] sm:text-base">
                       {service.description}
@@ -312,16 +339,16 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
         </section>
       </CompanyProfile>
 
-      {isImageFullscreen && service.images?.[fullscreenImageIndex] ? (
+      {isImageFullscreen && serviceImages[fullscreenImageIndex] ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4" onClick={closeImageFullscreen}>
           <div className="relative max-h-[92vh] w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
             <img
-              src={service.images[fullscreenImageIndex]}
+              src={serviceImages[fullscreenImageIndex]}
               alt={`${service.name} ${fullscreenImageIndex + 1}`}
               className="max-h-[92vh] w-full rounded-2xl object-contain"
             />
 
-            {service.images.length > 1 ? (
+            {serviceImages.length > 1 ? (
               <>
                 <button
                   type="button"
@@ -350,8 +377,8 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
             <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent px-6 py-5 text-white">
               <div className="text-lg font-semibold">{service.name}</div>
               <div className="text-sm text-white/80">
-                {service.images.length > 1
-                  ? `Foto ${fullscreenImageIndex + 1} de ${service.images.length}`
+                {serviceImages.length > 1
+                  ? `Foto ${fullscreenImageIndex + 1} de ${serviceImages.length}`
                   : 'Toque fora da imagem para fechar'}
               </div>
             </div>
