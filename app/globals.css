@@ -383,8 +383,28 @@ html[data-theme='dark'] .theme-app-promo-card {
 }
 
 .theme-footer {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-surface-secondary) 88%, #d8e0ea),
+    color-mix(in srgb, var(--color-background) 78%, #c9d4df)
+  );
+  border-top: 1px solid color-mix(in srgb, var(--color-border-strong) 54%, transparent);
+  color: var(--color-text-primary);
+}
+
+html[data-theme='dark'] .theme-footer {
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 92%, black), color-mix(in srgb, var(--color-background) 76%, black));
+  border-top-color: color-mix(in srgb, var(--color-border) 40%, transparent);
   color: #ffffff;
+}
+
+.theme-footer-link {
+  color: var(--color-text-secondary);
+  transition: color 160ms ease;
+}
+
+.theme-footer-link:hover {
+  color: var(--color-text-primary);
 }
 
 .theme-hero-shell {

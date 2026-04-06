@@ -5,7 +5,7 @@ import ThemeProvider from '../src/components/theme/ThemeProvider';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://agendar.buzke.com.br';
-const themeBootScript = `(function(){try{var savedTheme=localStorage.getItem('buzke-theme');var preferredTheme=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',savedTheme||preferredTheme);}catch(error){document.documentElement.setAttribute('data-theme','light');}})();`;
+const themeBootScript = `(function(){try{var savedTheme=localStorage.getItem('buzke-theme');document.documentElement.setAttribute('data-theme',savedTheme||'dark');}catch(error){document.documentElement.setAttribute('data-theme','dark');}})();`;
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
