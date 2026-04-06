@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import CompanyBookingPageClient from '../../src/components/CompanyBookingPageClient';
+import StructuredDataScript from '../../src/components/StructuredDataScript';
 import type { Company, Service } from '../../src/types';
 import {
   buildCompanyLandingDescription,
@@ -63,6 +64,26 @@ function buildPriceRange(services: Service[]) {
   const maximum = Math.max(...prices);
 
   return minimum === maximum ? `R$ ${minimum}` : `R$ ${minimum} - R$ ${maximum}`;
+}
+
+function normalizeText(value?: string | null) {
+  const normalizedValue = value?.replace(/\s+/g, ' ').trim();
+
+  return normalizedValue || undefined;
+}
+
+function buildAggregateRating(rating: number | null, reviewCount: number) {
+  if (rating === null || !Number.isFinite(rating) || reviewCount <= 0) {
+    return undefined;
+  }
+
+  return {
+    '@type': 'AggregateRating',
+    ratingValue: Number(rating.toFixed(1)),
+    reviewCount,
+    bestRating: 5,
+    worstRating: 1,
+  };
 }
 
 function buildOpeningHoursSpecification(company: Company) {
@@ -262,6 +283,10 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
   const openingHoursSpecification = buildOpeningHoursSpecification(company);
   const sameAs = buildSameAs(company);
   const priceRange = buildPriceRange(initialServices);
+  const aggregateRating = buildAggregateRating(
+    company.media_avaliacoes,
+    Number(company.total_avaliacoes || 0)
+  );
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -269,7 +294,7 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
       {
         '@type': 'LocalBusiness',
         '@id': `${url}#business`,
-        name: company.name,
+        name: normalizeText(company.name),
         description,
         url,
         image,
@@ -292,20 +317,13 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
             }
           : undefined,
         openingHoursSpecification: openingHoursSpecification.length ? openingHoursSpecification : undefined,
-        aggregateRating:
-          company.media_avaliacoes !== null
-            ? {
-                '@type': 'AggregateRating',
-                ratingValue: company.media_avaliacoes,
-                reviewCount: Number(company.total_avaliacoes || 0),
-              }
-            : undefined,
+        aggregateRating,
         makesOffer: initialServices.slice(0, 10).map((service) => ({
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: service.name,
-            description: service.description,
+            name: normalizeText(service.name),
+            description: normalizeText(service.description),
           },
           price: service.price,
           priceCurrency: 'BRL',
@@ -335,10 +353,7 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
+      <StructuredDataScript id={`company-structured-data-${company.id}`} data={structuredData} />
       <CompanyBookingPageClient
         company={company}
         initialServices={initialServices}

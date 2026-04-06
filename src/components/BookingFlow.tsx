@@ -11,6 +11,8 @@ import PetStep from './PetStep';
 import ProfessionalSelector from './ProfessionalSelector';
 import SportSelector from './SportSelector';
 import TimeSlotPicker from './TimeSlotPicker';
+import { useTheme } from './theme/ThemeProvider';
+import { getServiceImageSources } from '../lib/service-images';
 
 interface BookingFlowProps {
   selectedService: Service;
@@ -43,6 +45,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   stickySteps = false,
   showSelectionSidebar = false,
 }) => {
+  const { theme } = useTheme();
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const activeContainerRef = containerRef || internalContainerRef;
 
@@ -72,6 +75,10 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     [appointmentData?.subcategorias, selectedSportId]
   );
   const showDesktopSidebar = showSelectionSidebar && bookingStep < finalStep;
+  const selectedServiceImages = useMemo(
+    () => getServiceImageSources(selectedService.images, theme),
+    [selectedService.images, theme]
+  );
 
   const formatSelectedDate = (date: string | null) => {
     if (!date) {
@@ -288,9 +295,9 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
         <div>
           {showServiceSummary ? (
             <div className="mb-6 flex flex-col gap-6 md:flex-row">
-              {selectedService.images && selectedService.images.length > 0 ? (
+              {selectedServiceImages[0] ? (
                 <div className="h-40 w-full overflow-hidden rounded-lg md:w-1/3">
-                  <img src={selectedService.images[0]} alt={selectedService.name} className="h-full w-full object-cover" />
+                  <img src={selectedServiceImages[0]} alt={selectedService.name} className="h-full w-full object-cover" />
                 </div>
               ) : null}
               <div className="w-full md:w-2/3">
@@ -404,9 +411,9 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           {showDesktopSidebar ? (
             <aside className={`hidden lg:block lg:sticky ${sidebarStickyTopClassName}`}>
               <div className="theme-card overflow-hidden p-5">
-                {selectedService.images?.[0] ? (
+                {selectedServiceImages[0] ? (
                   <div className="mb-5 h-40 overflow-hidden rounded-[1.25rem] border border-[var(--color-border)]">
-                    <img src={selectedService.images[0]} alt={selectedService.name} className="h-full w-full object-cover" />
+                    <img src={selectedServiceImages[0]} alt={selectedService.name} className="h-full w-full object-cover" />
                   </div>
                 ) : null}
 

@@ -8,6 +8,7 @@ import {
   mergeServicesWithSlugEntries,
   parseServiceSlugEntries,
 } from '../../lib/service-slugs';
+import { getServiceRatingValue, getServiceReviewCount } from '../../lib/service-rating';
 
 moment.locale('pt-br');
 
@@ -36,6 +37,9 @@ interface RawService {
   horarios_atendimento: RawServiceSchedule[];
   fotos: RawServicePhoto[];
   media_avaliacoes?: number;
+  _media_avaliacoes?: number;
+  total_avaliacoes?: string | number;
+  _total_avaliacoes?: string | number;
   tipo?: string;
 }
 
@@ -90,9 +94,9 @@ const ServicesList: React.FC<ServicesListProps> = ({
         description: service.descricao,
         duration: formatDuration(service.horarios_atendimento[0].duracao),
         price: service.horarios_atendimento[0].valor_padrao,
-        images: service.fotos.map((foto) => foto.imagem),
-        rating: service.media_avaliacoes,
-        reviewCount: 0,
+        images: service.fotos.map((foto) => foto.imagem).filter(Boolean),
+        rating: getServiceRatingValue(service),
+        reviewCount: getServiceReviewCount(service),
         tipo: service.tipo
       }));
 

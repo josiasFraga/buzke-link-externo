@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import ServiceBookingPageClient from '../../../src/components/ServiceBookingPageClient';
+import StructuredDataScript from '../../../src/components/StructuredDataScript';
 import type { Company, Service } from '../../../src/types';
 import {
   buildServiceSeoDescription,
@@ -60,6 +61,26 @@ function buildDurationIso(duration: string) {
   }
 
   return `PT${hours ? `${hours}H` : ''}${minutes ? `${minutes}M` : ''}`;
+}
+
+function normalizeText(value?: string | null) {
+  const normalizedValue = value?.replace(/\s+/g, ' ').trim();
+
+  return normalizedValue || undefined;
+}
+
+function buildAggregateRating(rating: number | undefined, reviewCount: number | undefined) {
+  if (!Number.isFinite(rating) || !reviewCount || reviewCount <= 0) {
+    return undefined;
+  }
+
+  return {
+    '@type': 'AggregateRating',
+    ratingValue: Number(rating!.toFixed(1)),
+    reviewCount,
+    bestRating: 5,
+    worstRating: 1,
+  };
 }
 
 function buildSameAs(company: Company) {
@@ -203,6 +224,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
   const location = getLocationLabel(data.company);
   const sameAs = buildSameAs(data.company);
   const durationIso = buildDurationIso(data.service.duration);
+  const aggregateRating = buildAggregateRating(data.service.rating, data.service.reviewCount);
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -210,7 +232,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
       {
         '@type': 'Service',
         '@id': `${serviceUrl}#service`,
-        name: data.service.name,
+        name: normalizeText(data.service.name),
         description,
         image: data.service.images?.[0] || data.company.logo || data.company.coverPhoto,
         serviceType: data.service.tipo || data.company.categories?.[0] || undefined,
@@ -222,11 +244,11 @@ export default async function ServicePage({ params }: ServicePageProps) {
             }
           : undefined,
         providerMobility: 'dynamic',
-        hoursAvailable: durationIso,
+        duration: durationIso,
         provider: {
           '@type': 'LocalBusiness',
           '@id': `${siteUrl}/${data.company.slug || params.username}#business`,
-          name: data.company.name,
+          name: normalizeText(data.company.name),
           url: `${siteUrl}/${data.company.slug || params.username}`,
           image: data.company.logo || data.company.coverPhoto,
           telephone: data.company.phone || data.company.whatsapp || undefined,
@@ -250,13 +272,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
               availability: 'https://schema.org/InStock',
             }
           : undefined,
-        aggregateRating: data.service.rating
-          ? {
-              '@type': 'AggregateRating',
-              ratingValue: data.service.rating,
-              reviewCount: Number(data.service.reviewCount || 0),
-            }
-          : undefined,
+        aggregateRating,
         url: serviceUrl,
       },
       {
@@ -272,13 +288,13 @@ export default async function ServicePage({ params }: ServicePageProps) {
           {
             '@type': 'ListItem',
             position: 2,
-            name: data.company.name,
+            name: normalizeText(data.company.name),
             item: `${siteUrl}/${data.company.slug || params.username}`,
           },
           {
             '@type': 'ListItem',
             position: 3,
-            name: data.service.name,
+            name: normalizeText(data.service.name),
             item: serviceUrl,
           },
         ],
@@ -298,9 +314,9 @@ export default async function ServicePage({ params }: ServicePageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      <StructuredDataScript
+        id={`service-structured-data-${data.company.id}-${data.service.id}`}
+        data={structuredData}
       />
       <ServiceBookingPageClient
         key={data.service.id}
