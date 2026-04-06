@@ -49,7 +49,11 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
                   className="w-full h-full object-cover"
                 />
               </div>
-              <p className="text-sm font-medium text-center text-gray-800 truncate">
+              <p
+                className={`text-sm font-medium text-center truncate ${
+                  isAvailable ? 'theme-text-primary' : 'theme-text-muted'
+                }`}
+              >
                 {professional.usuario.nome}
               </p>
               {!isAvailable && (

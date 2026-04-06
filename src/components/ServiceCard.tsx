@@ -5,6 +5,20 @@ import { Clock, ArrowRight, Star, Maximize2, ChevronLeft, ChevronRight } from 'l
 import { useTheme } from './theme/ThemeProvider';
 import { getServiceImageSources } from '../lib/service-images';
 
+const twoLineClampStyle = {
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+};
+
+const fourLineClampStyle = {
+  display: '-webkit-box',
+  WebkitLineClamp: 4,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+};
+
 interface ServiceCardProps {
   service: Service;
   onSelect: () => void;
@@ -146,7 +160,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
   return (
     <>
       <div 
-        className="theme-card cursor-pointer overflow-hidden rounded-[var(--radius-button)] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+        className="theme-card flex h-full cursor-pointer flex-col overflow-hidden rounded-[var(--radius-button)] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
         onClick={handleCardClick}
       >
         {/* Image Slideshow */}
@@ -156,23 +170,23 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
           </Link>
         ) : imageContent}
         
-        <div className="p-6">
-          <div className="mb-2 flex items-start justify-between gap-3">
-            <h3 className="theme-text-primary text-xl font-bold">
+        <div className="flex flex-1 flex-col p-6">
+          <div className="mb-2 flex min-h-[3.5rem] items-start justify-between gap-3">
+            <h3 className="theme-text-primary flex-1 text-xl font-bold leading-tight">
               {href ? (
-                <Link href={href} onClick={(event) => event.stopPropagation()} className="hover:underline">
+                <Link href={href} onClick={(event) => event.stopPropagation()} className="block min-h-[3.5rem] hover:underline" style={twoLineClampStyle}>
                   {service.name}
                 </Link>
               ) : (
-                service.name
+                <span style={twoLineClampStyle}>{service.name}</span>
               )}
             </h3>
             {renderRating()}
           </div>
           
-          <p className="theme-text-secondary mb-6 min-h-[60px]">{service.description}</p>
+          <p className="theme-text-secondary mb-6 h-24 leading-7" style={fourLineClampStyle}>{service.description}</p>
           
-          <div className="mb-4 flex items-center justify-between text-sm">
+          <div className="mb-4 mt-auto flex items-center justify-between text-sm">
             <div className="theme-panel-accent flex items-center rounded-full px-3 py-1">
               <Clock size={16} className="mr-1" />
               <span className="font-medium">{service.duration}</span>

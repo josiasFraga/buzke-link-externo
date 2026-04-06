@@ -78,18 +78,44 @@ export function getPhoneHref(phone?: string) {
   return `tel:+${digits}`;
 }
 
-export function getWhatsappHref(whatsapp: string | undefined, companyName: string) {
-  if (!whatsapp) {
-    return null;
+function getCountryDialCode(company: Company) {
+  const country = company.address?.pais?.trim().toLowerCase();
+
+  if (country === 'uruguai') {
+    return '598';
   }
 
-  const digits = whatsapp.replace(/\D/g, '');
+  return '55';
+}
+
+function normalizeWhatsappNumber(whatsapp: string, company: Company) {
+  const digits = whatsapp.replace(/\D/g, '').replace(/^0+/, '');
 
   if (!digits) {
     return null;
   }
 
-  const message = encodeURIComponent(`Olá! Vim pela página de agendamento da ${companyName} e gostaria de mais informações.`);
+  const countryDialCode = getCountryDialCode(company);
+
+  if (digits.startsWith(countryDialCode)) {
+    return digits;
+  }
+
+  return `${countryDialCode}${digits}`;
+}
+
+export function getWhatsappHref(whatsapp: string | undefined, company: Company) {
+  if (!whatsapp) {
+    return null;
+  }
+
+  const digits = normalizeWhatsappNumber(whatsapp, company);
+
+  if (!digits) {
+    return null;
+  }
+
+  const message = encodeURIComponent(`Olá! Vim pela página de agendamento da ${company.name} e gostaria de mais informações.`);
 
   return `https://wa.me/${digits}?text=${message}`;
 }
