@@ -21,11 +21,7 @@ function getPreferredTheme(): ThemeName {
     }
   }
 
-  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
-  }
-
-  return 'light';
+  return 'dark';
 }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
