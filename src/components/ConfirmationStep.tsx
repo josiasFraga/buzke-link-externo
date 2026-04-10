@@ -23,6 +23,7 @@ interface AppointmentCreatePayload {
   cliente_id: number;
   servico_id: number;
   horario: string;
+  duracao: string;
   domicilio: 'Y' | 'N';
   endereco?: string;
   ilimitado?: 'Y' | 'N';
@@ -123,6 +124,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         cliente_id: parseInt(selectedService.companyId),
         servico_id: parseInt(selectedService.id),
         horario: appointmentDate,
+        duracao: selectedTimeSlotData.duration,
         domicilio: isAtHome ? 'Y' : 'N',
         endereco: isAtHome ? address : undefined,
         ...(isRecurring && {
