@@ -104,14 +104,6 @@ const DatePicker: React.FC<DatePickerProps> = ({
     return selectedDate === formatDate(day);
   };
   
-  // Check if a date is today
-  const isToday = (day: number) => {
-    const today = new Date();
-    return day === today.getDate() && 
-           month === today.getMonth() && 
-           year === today.getFullYear();
-  };
-  
   // Handle date selection
   const handleDateSelect = (day: number) => {
     if (!isPastDate(day)) {

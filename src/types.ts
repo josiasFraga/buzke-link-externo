@@ -112,11 +112,13 @@ export interface User {
   id: number;
   nome: string;
   email: string;
-  usuario: string;
-  img: string;
+  email_validado?: number;
+  usuario: string | null;
+  img: string | null;
   telefone: string | null;
-  telefone_ddi: string;
-  pais: string;
+  telefone_validado: number;
+  telefone_ddi: string | null;
+  pais: string | null;
   cliente_id: number | null;
   cliente?: {
     id: number;

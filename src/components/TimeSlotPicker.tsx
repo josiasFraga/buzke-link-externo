@@ -104,9 +104,9 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
       <div className="mb-4">
         <h4 className="theme-text-secondary mb-2 text-sm font-medium">{title}</h4>
         <div className="grid grid-cols-3 gap-2">
-          {slots.map(slot => (
+          {slots.map((slot, index) => (
             <button
-              key={slot.time}
+              key={`${title}-${slot.time}-${slot.endTime}-${slot.duration}-${index}`}
               onClick={() => slot.active && onSelectTimeSlot(slot.time)}
               disabled={!slot.active}
               className={`
