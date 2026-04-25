@@ -27,10 +27,14 @@ interface ServiceCardProps {
 
 const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) => {
   const { theme } = useTheme();
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentImageState, setCurrentImageState] = useState({ key: '', index: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const slideInterval = useRef<number | null>(null);
   const serviceImages = useMemo(() => getServiceImageSources(service.images, theme), [service.images, theme]);
+  const imageSetKey = `${service.id}-${theme}`;
+  const currentImageIndex = currentImageState.key === imageSetKey && currentImageState.index < serviceImages.length
+    ? currentImageState.index
+    : 0;
   const hasMultipleImages = serviceImages.length > 1;
   const ratingValue = typeof service.rating === 'number' && Number.isFinite(service.rating) ? service.rating : undefined;
   const reviewCount = Number(service.reviewCount || 0);
@@ -43,17 +47,18 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
     onSelect();
   };
 
-  useEffect(() => {
-    setCurrentImageIndex(0);
-  }, [service.id, theme]);
-  
   // Start slideshow
   useEffect(() => {
     if (hasMultipleImages) {
       slideInterval.current = window.setInterval(() => {
-        setCurrentImageIndex(prev => 
-          prev === serviceImages.length - 1 ? 0 : prev + 1
-        );
+        setCurrentImageState((prev) => {
+          const previousIndex = prev.key === imageSetKey && prev.index < serviceImages.length ? prev.index : 0;
+
+          return {
+            key: imageSetKey,
+            index: previousIndex === serviceImages.length - 1 ? 0 : previousIndex + 1,
+          };
+        });
       }, 5000); // Change image every 5 seconds
     }
     
@@ -62,16 +67,17 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
         clearInterval(slideInterval.current);
       }
     };
-  }, [hasMultipleImages, serviceImages]);
+  }, [hasMultipleImages, imageSetKey, serviceImages.length]);
   
   // Handle next image
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (serviceImages.length) {
-      setCurrentImageIndex(prev => 
-        prev === serviceImages.length - 1 ? 0 : prev + 1
-      );
+      setCurrentImageState({
+        key: imageSetKey,
+        index: currentImageIndex === serviceImages.length - 1 ? 0 : currentImageIndex + 1,
+      });
     }
   };
   
@@ -80,9 +86,10 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onSelect, href }) =>
     e.stopPropagation();
     e.preventDefault();
     if (serviceImages.length) {
-      setCurrentImageIndex(prev => 
-        prev === 0 ? serviceImages.length - 1 : prev - 1
-      );
+      setCurrentImageState({
+        key: imageSetKey,
+        index: currentImageIndex === 0 ? serviceImages.length - 1 : currentImageIndex - 1,
+      });
     }
   };
   

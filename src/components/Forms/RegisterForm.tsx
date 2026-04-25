@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, Mail, Lock, Globe, Phone } from 'lucide-react';
+import DdiPicker from './DdiPicker';
 
 interface RegisterFormProps {
   name: string;
@@ -21,6 +22,7 @@ interface RegisterFormProps {
   onPasswordChange: (value: string) => void;
   onConfirmPasswordChange: (value: string) => void;
   onCountryChange: (value: string) => void;
+  onPhonePrefixChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
 }
 
@@ -38,6 +40,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   onPasswordChange,
   onConfirmPasswordChange,
   onCountryChange,
+  onPhonePrefixChange,
   onPhoneChange
 }) => {
   const formatPhoneNumber = (value: string) => {
@@ -102,16 +105,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
           Telefone
         </label>
         <div className="flex gap-2">
-          <div className="theme-card-soft theme-text-primary w-24 px-2 py-3 text-center font-medium">
-            {phonePrefix}
-          </div>
+          <DdiPicker id="register-phone-ddi" value={phonePrefix} onChange={onPhonePrefixChange} />
           <input
             type="tel"
             id="phone"
             value={phone}
             onChange={handlePhoneChange}
             placeholder={phonePrefix === '+55' ? '(XX) XXXXX-XXXX' : 'XXXX XXXX'}
-            className={`theme-input flex-1 px-4 py-3 ${errors.phone ? 'border-red-500' : ''}`}
+            className={`theme-input min-w-0 flex-1 px-4 py-3 ${errors.phone ? 'border-red-500' : ''}`}
           />
         </div>
         {errors.phone && <p className="theme-text-danger mt-1 text-sm">{errors.phone}</p>}

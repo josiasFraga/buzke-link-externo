@@ -66,6 +66,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
       ? `${company.address.city} - ${company.address.state}`
       : company.address.city;
   }, [company.address]);
+  const companyHref = `/${company.slug || company.id}`;
 
   useEffect(() => {
     setCompany(company);
@@ -195,7 +196,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
                 <ol className="theme-text-secondary flex min-w-max items-center gap-2 text-sm">
                   <li>
                     <Link
-                      href="/"
+                      href={companyHref}
                       className="rounded-full border border-transparent px-3 py-1.5 transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-surface)_56%,transparent)] hover:text-[var(--color-text-primary)]"
                     >
                       Inicio
@@ -206,7 +207,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
                   </li>
                   <li>
                     <Link
-                      href={`/${company.slug || company.id}`}
+                      href={companyHref}
                       className="rounded-full border border-transparent px-3 py-1.5 transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-surface)_56%,transparent)] hover:text-[var(--color-text-primary)]"
                     >
                       {company.name}

@@ -200,7 +200,11 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       ? 'professional-selector-section'
       : showSportSelector
         ? 'sport-selector-section'
-        : 'booking-continue-section';
+        : null;
+
+    if (!targetSectionId) {
+      return;
+    }
 
     const timeoutId = window.setTimeout(() => {
       scrollToFlowSection(targetSectionId);
@@ -210,34 +214,6 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       window.clearTimeout(timeoutId);
     };
   }, [selectedTimeSlot, showProfessionalSelector, showSportSelector]);
-
-  useEffect(() => {
-    if (!selectedProfessionalId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      scrollToFlowSection('booking-continue-section');
-    }, 120);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [selectedProfessionalId]);
-
-  useEffect(() => {
-    if (!selectedSportId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      scrollToFlowSection('booking-continue-section');
-    }, 120);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [selectedSportId]);
 
   const handleDateSelect = (date: string) => {
     setError(null);
