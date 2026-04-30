@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Maximize2, Star, X } from 'lucide-react';
 import { AppointmentSlots, Company, Service, TimeSlot } from '../types';
 import { useCompanyStore } from '../store/companyStore';
+import useAuthStore from '../store/authStore';
 import { buildPublicApiUrl } from '../lib/public-api';
 import BookingFlow from './BookingFlow';
 import CompanyProfile from './CompanyProfile';
@@ -20,8 +21,34 @@ interface ServiceBookingPageClientProps {
   initialSelectedDate?: string | null;
 }
 
+function normalizeTimeSlot(slot: TimeSlot): TimeSlot {
+  const interestOptions = slot.interest_options;
+  const registeredInterestOptions = slot.registered_interest_options;
+
+  return {
+    ...slot,
+    can_express_interest: Boolean(slot.can_express_interest),
+    occupied_appointment_id: typeof slot.occupied_appointment_id === 'number' ? slot.occupied_appointment_id : undefined,
+    occupied_by_fixed: Boolean(slot.occupied_by_fixed),
+    occupied_fixed_type: slot.occupied_fixed_type ?? null,
+    interest_options: interestOptions
+      ? {
+          occasional: Boolean(interestOptions.occasional),
+          fixed_series: Boolean(interestOptions.fixed_series),
+        }
+      : undefined,
+    registered_interest_options: registeredInterestOptions
+      ? {
+          occasional: Boolean(registeredInterestOptions.occasional),
+          fixed_series: Boolean(registeredInterestOptions.fixed_series),
+        }
+      : undefined,
+  };
+}
+
 function ServiceBookingPageClient({ company, service, initialSelectedDate }: ServiceBookingPageClientProps) {
   const { setCompany, clearCompany } = useCompanyStore();
+  const { token } = useAuthStore();
   const { theme } = useTheme();
   const bookingFlowSectionRef = useRef<HTMLDivElement>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate ?? null);
@@ -76,27 +103,54 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
     };
   }, [clearCompany, company, setCompany]);
 
-  useEffect(() => {
-    if (!selectedDate) {
-      return;
-    }
-
-    const [year, month, day] = selectedDate.split('-');
+  const fetchAppointmentData = useCallback((date: string) => {
+    const [year, month, day] = date.split('-');
     const formattedDate = `${day}/${month}/${year}`;
     const serviceIdentifier = service.slug || service.id;
 
-    fetch(buildPublicApiUrl(`/services/data-to-appointment?servico_id=${encodeURIComponent(serviceIdentifier)}&data=${formattedDate}`))
+    const headers = token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined;
+
+    return fetch(buildPublicApiUrl(`/services/data-to-appointment?servico_id=${encodeURIComponent(serviceIdentifier)}&data=${formattedDate}`), {
+      headers,
+    })
       .then((response) => response.json())
       .then((data: AppointmentSlots) => {
-        setTimeSlots(data.horarios || []);
-        setAppointmentData(data);
+        const normalizedTimeSlots = (data.horarios || []).map(normalizeTimeSlot);
+
+        setTimeSlots(normalizedTimeSlots);
+        setAppointmentData({
+          ...data,
+          horarios: normalizedTimeSlots,
+        });
+        setSelectedTimeSlotData((currentSelectedSlot) => {
+          const currentTime = currentSelectedSlot?.time || selectedTimeSlot;
+
+          if (!currentTime) {
+            return null;
+          }
+
+          return normalizedTimeSlots.find((slot) => slot.time === currentTime) || null;
+        });
       })
       .catch((error) => {
         console.error('Error fetching time slots:', error);
         setTimeSlots([]);
         setAppointmentData(null);
+        setSelectedTimeSlotData(null);
       });
-  }, [selectedDate, service.id, service.slug]);
+  }, [selectedTimeSlot, service.id, service.slug, token]);
+
+  useEffect(() => {
+    if (!selectedDate) {
+      return;
+    }
+
+    void fetchAppointmentData(selectedDate);
+  }, [fetchAppointmentData, selectedDate]);
 
   useEffect(() => {
     const target = document.getElementById('booking-steps-scroll-anchor') || bookingFlowSectionRef.current;
@@ -283,6 +337,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
               onSelectDate={handleSelectDate}
               onSelectTimeSlot={handleSelectTimeSlot}
               appointmentData={appointmentData}
+              onRefreshTimeSlots={selectedDate ? () => fetchAppointmentData(selectedDate) : undefined}
               showServiceSummary={false}
               stickySteps
               showSelectionSidebar

@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, ArrowLeft, CheckCircle2, Clock3, Sparkles, Trophy, UserRound } from 'lucide-react';
-import { Appointment, AppointmentSlots, Service, TimeSlot, Voucher } from '../types';
+import { Appointment, AppointmentSlotInterestType, AppointmentSlots, Service, TimeSlot, Voucher } from '../types';
 import { getBookingSteps } from '../data/mockData';
 import AuthStep from './AuthStep';
 import BookingConfirmation from './BookingConfirmation';
 import BookingSteps from './BookingSteps';
 import ConfirmationStep from './ConfirmationStep';
 import DatePicker from './DatePicker';
+import { createAppointmentSlotInterest } from '../lib/appointment-slot-interests';
+import { useToast } from './feedback/ToastProvider';
+import useAuthStore from '../store/authStore';
+import Modal from './Modal';
 import PetStep from './PetStep';
 import ProfessionalSelector from './ProfessionalSelector';
 import SportSelector from './SportSelector';
@@ -24,10 +28,40 @@ interface BookingFlowProps {
   onSelectTimeSlot: (timeSlotId: string) => void;
   onDateSelected?: () => void;
   appointmentData: AppointmentSlots | null;
+  onRefreshTimeSlots?: () => Promise<void> | void;
   containerRef?: React.RefObject<HTMLDivElement>;
   showServiceSummary?: boolean;
   stickySteps?: boolean;
   showSelectionSidebar?: boolean;
+}
+
+interface PendingInterestRequest {
+  slot: TimeSlot;
+  type: AppointmentSlotInterestType;
+}
+
+function getInterestTypesForSlot(slot: TimeSlot): AppointmentSlotInterestType[] {
+  const interestTypes: AppointmentSlotInterestType[] = [];
+
+  if (slot.interest_options?.occasional) {
+    interestTypes.push('occasional');
+  }
+
+  if (slot.occupied_by_fixed && slot.interest_options?.fixed_series) {
+    interestTypes.push('fixed_series');
+  }
+
+  return interestTypes;
+}
+
+function getInterestTypeLabel(type: AppointmentSlotInterestType) {
+  return type === 'fixed_series' ? 'Interesse fixo' : 'Interesse avulso';
+}
+
+function getInterestTypeDescription(type: AppointmentSlotInterestType) {
+  return type === 'fixed_series'
+    ? 'Você só recebe aviso se o titular atual desistir desse horário fixo. Se isso acontecer, você decide depois se quer ficar com ele.'
+    : 'Você recebe aviso se esse horário for cancelado nesta data. Se a vaga abrir, você decide depois se quer ficar com ela.';
 }
 
 const BookingFlow: React.FC<BookingFlowProps> = ({
@@ -40,14 +74,19 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   onSelectTimeSlot,
   onDateSelected,
   appointmentData,
+  onRefreshTimeSlots,
   containerRef,
   showServiceSummary = true,
   stickySteps = false,
   showSelectionSidebar = false,
 }) => {
   const { theme } = useTheme();
+  const { showToast } = useToast();
+  const { isAuthenticated, token } = useAuthStore();
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const activeContainerRef = containerRef || internalContainerRef;
+  const lastErrorToastRef = useRef<string | null>(null);
+  const lastInterestErrorToastRef = useRef<string | null>(null);
 
   const [bookingStep, setBookingStep] = useState(1);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
@@ -56,6 +95,12 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
+  const [interestSelectionSlot, setInterestSelectionSlot] = useState<TimeSlot | null>(null);
+  const [interestSelectionType, setInterestSelectionType] = useState<AppointmentSlotInterestType | null>(null);
+  const [pendingInterestRequest, setPendingInterestRequest] = useState<PendingInterestRequest | null>(null);
+  const [interestLoadingAppointmentId, setInterestLoadingAppointmentId] = useState<number | null>(null);
+  const [interestError, setInterestError] = useState<string | null>(null);
+  const [interestSuccess, setInterestSuccess] = useState<string | null>(null);
 
   const requiresPetInfo = appointmentData?.selecao_pet || false;
   const bookingSteps = useMemo(() => getBookingSteps(requiresPetInfo), [requiresPetInfo]);
@@ -192,6 +237,34 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   }, [bookingStep]);
 
   useEffect(() => {
+    if (!error) {
+      lastErrorToastRef.current = null;
+      return;
+    }
+
+    if (lastErrorToastRef.current === error) {
+      return;
+    }
+
+    lastErrorToastRef.current = error;
+    showToast({ message: error, variant: 'error' });
+  }, [error, showToast]);
+
+  useEffect(() => {
+    if (!interestError) {
+      lastInterestErrorToastRef.current = null;
+      return;
+    }
+
+    if (lastInterestErrorToastRef.current === interestError) {
+      return;
+    }
+
+    lastInterestErrorToastRef.current = interestError;
+    showToast({ message: interestError, variant: 'error' });
+  }, [interestError, showToast]);
+
+  useEffect(() => {
     if (!selectedTimeSlot) {
       return;
     }
@@ -217,6 +290,11 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
 
   const handleDateSelect = (date: string) => {
     setError(null);
+    setInterestError(null);
+    setInterestSuccess(null);
+    setPendingInterestRequest(null);
+    setInterestSelectionSlot(null);
+    setInterestSelectionType(null);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
     onSelectDate(date);
@@ -224,9 +302,99 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
 
   const handleTimeSlotSelect = (timeSlotId: string) => {
     setError(null);
+    setInterestError(null);
+    setInterestSuccess(null);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
     onSelectTimeSlot(timeSlotId);
+  };
+
+  const submitSlotInterest = async (slot: TimeSlot, type: AppointmentSlotInterestType) => {
+    if (!token) {
+      setInterestError('Faça login para registrar interesse nesse horário.');
+      return;
+    }
+
+    if (!selectedDate) {
+      setInterestError('Selecione a data do horário para registrar esse aviso.');
+      return;
+    }
+
+    if (!slot.occupied_appointment_id) {
+      setInterestError('Esse horário permite interesse, mas o backend não retornou occupied_appointment_id. Sem esse identificador não é possível concluir o envio.');
+      return;
+    }
+
+    setError(null);
+    setInterestError(null);
+    setInterestSuccess(null);
+    setInterestSelectionSlot(null);
+    setInterestLoadingAppointmentId(slot.occupied_appointment_id);
+
+    try {
+      await createAppointmentSlotInterest({
+        token,
+        appointmentId: slot.occupied_appointment_id,
+        tipoInteresse: type,
+        dataSlot: selectedDate,
+        horaInicio: slot.time,
+        duracao: slot.duration,
+      });
+      await onRefreshTimeSlots?.();
+      setPendingInterestRequest(null);
+      setBookingStep(1);
+      setInterestSuccess(
+        type === 'fixed_series'
+          ? 'Seu interesse na série fixa foi registrado. A continuidade acontecerá pelo atendimento da empresa.'
+          : 'Seu interesse nesse horário foi registrado. A continuidade acontecerá pelo atendimento da empresa.'
+      );
+    } catch (err) {
+      setInterestError(err instanceof Error ? err.message : 'Não foi possível registrar seu interesse agora.');
+    } finally {
+      setInterestLoadingAppointmentId(null);
+    }
+  };
+
+  const handleInterestTypeSelect = (slot: TimeSlot, type: AppointmentSlotInterestType) => {
+    setInterestSelectionSlot(null);
+    setInterestSelectionType(null);
+
+    if (!isAuthenticated || !token) {
+      setPendingInterestRequest({ slot, type });
+      setBookingStep(2);
+      return;
+    }
+
+    void submitSlotInterest(slot, type);
+  };
+
+  const handleExpressInterest = (slot: TimeSlot) => {
+    const interestTypes = getInterestTypesForSlot(slot);
+
+    setError(null);
+    setInterestError(null);
+    setInterestSuccess(null);
+
+    if (interestTypes.length === 0) {
+      setInterestError('Esse horário não possui opção de interesse disponível.');
+      return;
+    }
+
+    setInterestSelectionSlot(slot);
+    setInterestSelectionType(interestTypes[0]);
+  };
+
+  const handleCloseInterestModal = () => {
+    setInterestSelectionSlot(null);
+    setInterestSelectionType(null);
+  };
+
+  const handleConfirmInterestSelection = () => {
+    if (!interestSelectionSlot || !interestSelectionType) {
+      return;
+    }
+
+    handleInterestTypeSelect(interestSelectionSlot, interestSelectionType);
   };
 
   const handleNextStep = () => {
@@ -248,6 +416,13 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   };
 
   const handleBack = () => {
+    if (pendingInterestRequest && bookingStep === 2) {
+      setInterestError(null);
+      setPendingInterestRequest(null);
+      setBookingStep(1);
+      return;
+    }
+
     setError(null);
     setBookingStep((prev) => prev - 1);
   };
@@ -261,6 +436,19 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setAppointment(newAppointment);
     setAppliedVoucher(voucher);
     setBookingStep(finalStep);
+  };
+
+  const handleAuthStepSuccess = () => {
+    if (!pendingInterestRequest) {
+      handleNextStep();
+      return;
+    }
+
+    const request = pendingInterestRequest;
+
+    setPendingInterestRequest(null);
+    setBookingStep(1);
+    void submitSlotInterest(request.slot, request.type);
   };
 
   const renderStepContent = () => {
@@ -293,7 +481,17 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           ) : null}
           <DatePicker onSelectDate={handleDateSelect} selectedDate={selectedDate} onDateSelected={onDateSelected} timeSlotsLoaded={timeSlotsLoaded} stickyTitle={stickySteps} stickyTopClassName={stickySectionTopClassName} />
           {selectedDate ? (
-            <TimeSlotPicker timeSlots={timeSlots} selectedTimeSlot={selectedTimeSlot} onSelectTimeSlot={handleTimeSlotSelect} isLoading={isLoadingTimeSlots} stickyTitle={stickySteps} stickyTopClassName={stickySectionTopClassName} autoScrollOnSelect={false} />
+            <TimeSlotPicker
+              timeSlots={timeSlots}
+              selectedTimeSlot={selectedTimeSlot}
+              onSelectTimeSlot={handleTimeSlotSelect}
+              onExpressInterest={handleExpressInterest}
+              isLoading={isLoadingTimeSlots}
+              stickyTitle={stickySteps}
+              stickyTopClassName={stickySectionTopClassName}
+              autoScrollOnSelect={false}
+              interestLoadingAppointmentId={interestLoadingAppointmentId}
+            />
           ) : null}
           {showProfessionalSelector && appointmentData?.profissionais && selectedTimeSlotData ? (
             <ProfessionalSelector
@@ -326,7 +524,19 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     currentStepIndex++;
 
     if (bookingStep === currentStepIndex) {
-      return <AuthStep onAuthSuccess={handleNextStep} />;
+      return (
+        <div className="space-y-4">
+          {pendingInterestRequest ? (
+            <div className="theme-panel-warning p-4">
+              <p className="theme-text-primary font-medium">Entre para receber aviso desse horário.</p>
+              <p className="theme-text-secondary mt-1 text-sm">
+                {pendingInterestRequest.slot.time} • {getInterestTypeLabel(pendingInterestRequest.type)}
+              </p>
+            </div>
+          ) : null}
+          <AuthStep onAuthSuccess={handleAuthStepSuccess} />
+        </div>
+      );
     }
     currentStepIndex++;
 
@@ -373,6 +583,18 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       {error ? (
         <div className="theme-panel-error mb-4 p-4">
           <p className="theme-text-danger">{error}</p>
+        </div>
+      ) : null}
+
+      {interestError ? (
+        <div className="theme-panel-error mb-4 p-4">
+          <p className="theme-text-danger">{interestError}</p>
+        </div>
+      ) : null}
+
+      {interestSuccess ? (
+        <div className="theme-panel-success mb-4 p-4">
+          <p className="theme-text-success font-medium">{interestSuccess}</p>
         </div>
       ) : null}
 
@@ -443,6 +665,76 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           ) : null}
         </div>
       )}
+
+      <Modal
+        isOpen={Boolean(interestSelectionSlot)}
+        onClose={handleCloseInterestModal}
+        title="Interesse no horário ocupado"
+      >
+        {interestSelectionSlot ? (
+          <div className="space-y-5">
+            <div className="theme-panel-warning p-4">
+              <p className="theme-text-primary font-medium">{interestSelectionSlot.time} está ocupado.</p>
+              <p className="theme-text-secondary mt-1 text-sm">
+                Vamos avisar você pelo app e pelo WhatsApp se esse horário ficar disponível. O horário não fica reservado e a decisão final continua sendo sua quando o aviso chegar.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <p className="theme-text-primary text-sm font-medium">Como você quer receber esse aviso?</p>
+
+              <div className="grid gap-3">
+                {getInterestTypesForSlot(interestSelectionSlot).map((type) => {
+                  const isSelected = interestSelectionType === type;
+
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setInterestSelectionType(type)}
+                      className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${
+                        isSelected
+                          ? 'border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]'
+                          : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
+                      }`}
+                    >
+                      <span className="theme-text-primary block font-medium">{getInterestTypeLabel(type)}</span>
+                      <span className="theme-text-secondary mt-1 block text-sm">{getInterestTypeDescription(type)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {!interestSelectionSlot.occupied_appointment_id ? (
+              <div className="theme-panel-warning p-4">
+                <p className="theme-text-primary text-sm font-medium">Este horário ainda não pode concluir o alerta.</p>
+                <p className="theme-text-secondary mt-1 text-sm">
+                  O sistema ainda não recebeu todos os dados necessários para registrar esse interesse. Assim que essa referência vier da API, o envio poderá ser concluído normalmente.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleCloseInterestModal}
+                className="theme-secondary-btn px-4 py-3"
+              >
+                Agora não
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmInterestSelection}
+                disabled={!interestSelectionType || !interestSelectionSlot.occupied_appointment_id}
+                className="theme-primary-btn px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Confirmar aviso
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
     </div>
   );
