@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import favicon from '../src/assets/favicon.png';
+import ToastProvider from '../src/components/feedback/ToastProvider';
 import ThemeProvider from '../src/components/theme/ThemeProvider';
 import './globals.css';
 
@@ -47,7 +48,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

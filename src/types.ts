@@ -48,6 +48,13 @@ export interface Service {
   tipo?: string;
 }
 
+export type AppointmentSlotInterestType = 'occasional' | 'fixed_series';
+
+export interface TimeSlotInterestOptions {
+  occasional: boolean;
+  fixed_series: boolean;
+}
+
 export interface TimeSlot {
   time: string;
   duration: string;
@@ -65,6 +72,12 @@ export interface TimeSlot {
   availableProfessionals: number[];
   active: boolean;
   motivo?: string;
+  can_express_interest?: boolean;
+  occupied_appointment_id?: number;
+  occupied_by_fixed?: boolean;
+  occupied_fixed_type?: 'Semanal' | 'Mensal' | null;
+  interest_options?: TimeSlotInterestOptions;
+  registered_interest_options?: TimeSlotInterestOptions;
 }
 
 export interface Sport {
