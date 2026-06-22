@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Service, TimeSlot, AppointmentSlots, Appointment, Voucher } from '../types';
+import { Appointment, AppointmentPaymentMethod, AppointmentSlots, Service, TimeSlot, Voucher } from '../types';
 import useAuthStore from '../store/authStore';
 import moment from '../utils/moment-pt-br';
 import RecurringOptions from './Forms/RecurringOptions';
@@ -13,8 +13,11 @@ interface ConfirmationStepProps {
   selectedDate: string;
   selectedTimeSlotData: TimeSlot;
   selectedProfessionalId: number | null;
+  selectedProfessionalUserId: number | null;
   selectedSportId: number | null;
+  selectedSubcategoryId: number | null;
   selectedPetId: number | null;
+  isLessonBooking?: boolean;
   appointmentData: AppointmentSlots | null;
   onBookingComplete: (appointment: Appointment, voucher: Voucher | null) => void;
 }
@@ -32,7 +35,56 @@ interface AppointmentCreatePayload {
   subcategoria_id?: number;
   pet_id?: number;
   vouchersIds?: number[];
+  agendamento_aula?: boolean;
+  selectedSport?: number;
   valor_final: number;
+}
+
+interface AppointmentCreateResponse {
+  id: number;
+  message?: string;
+  ids?: number[];
+  payment_id?: number | null;
+  appointment_status?: string;
+  payment_required?: boolean;
+  payment_percentage?: number | null;
+  required_payment_amount?: number | string | null;
+  payment_gateway?: string | null;
+  accepted_payment_methods?: Array<'pix' | 'cartao' | string>;
+  reserva_expira_em?: string | null;
+  reservation_expires_at?: string | null;
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizePaymentMethods(methods: AppointmentCreateResponse['accepted_payment_methods']): AppointmentPaymentMethod[] {
+  const normalizedMethods = (methods || [])
+    .map((method) => String(method).trim().toLowerCase())
+    .map((method): AppointmentPaymentMethod | null => {
+      if (method === 'pix') {
+        return 'pix';
+      }
+
+      if (method === 'cartao' || method === 'cartão' || method === 'card' || method === 'credit_card') {
+        return 'cartao';
+      }
+
+      return null;
+    })
+    .filter((method): method is AppointmentPaymentMethod => Boolean(method));
+
+  return normalizedMethods.length ? normalizedMethods : ['pix'];
 }
 
 const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
@@ -40,8 +92,11 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedDate,
   selectedTimeSlotData,
   selectedProfessionalId,
+  selectedProfessionalUserId,
   selectedSportId,
+  selectedSubcategoryId,
   selectedPetId,
+  isLessonBooking = false,
   appointmentData,
   onBookingComplete,
 }) => {
@@ -119,6 +174,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       const selectedProfessional = appointmentData?.profissionais?.find(
         prof => prof.id === selectedProfessionalId
       );
+      const professionalUserId = selectedProfessionalUserId || selectedProfessional?.usuario.id;
 
       const payload: AppointmentCreatePayload = {
         cliente_id: parseInt(selectedService.companyId),
@@ -131,8 +187,9 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
           ilimitado: recurringDuration === '12M' ? 'Y' : 'N',
           limite: recurringDuration !== '12M' ? recurringDuration : undefined,
         }),
-        ...(selectedProfessional && { profissional_id: selectedProfessional.usuario.id }),
-        ...(selectedSportId && { subcategoria_id: selectedSportId }),
+        ...(professionalUserId && { profissional_id: professionalUserId }),
+        agendamento_aula: isLessonBooking,
+        ...(selectedSubcategoryId && { selectedSport: selectedSubcategoryId, subcategoria_id: selectedSubcategoryId }),
         ...(selectedPetId && { pet_id: selectedPetId }),
         ...(appliedVoucher && { vouchersIds: [appliedVoucher.id] }),
         valor_final: totalPrice,
@@ -144,23 +201,39 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data: AppointmentCreateResponse = await response.json();
       if (!response.ok) throw new Error(data.message || 'Erro ao criar agendamento');
+
+      const paymentRequired = Boolean(data.payment_required && data.payment_id);
 
       const newAppointment: Appointment = {
         id: data.id.toString(),
+        ids: data.ids,
         serviceId: selectedService.id,
         date: selectedDate,
         timeSlot: selectedTimeSlotData.time,
         customerName: user.nome,
         customerEmail: user.email,
         isRecurring,
+        isLessonBooking,
         isAtHome,
         address: isAtHome ? address : undefined,
-        professionalId: selectedProfessional?.usuario.id,
+        professionalId: professionalUserId,
         sportId: selectedSportId || undefined,
         pet_id: selectedPetId || undefined,
         vouchersIds: appliedVoucher ? [appliedVoucher.id] : undefined,
+        payment: paymentRequired
+          ? {
+              paymentId: Number(data.payment_id),
+              required: true,
+              amount: toNumber(data.required_payment_amount),
+              percentage: data.payment_percentage ?? null,
+              gateway: data.payment_gateway ?? null,
+              acceptedMethods: normalizePaymentMethods(data.accepted_payment_methods),
+              appointmentStatus: data.appointment_status,
+              reservationExpiresAt: data.reservation_expires_at ?? data.reserva_expira_em ?? null,
+            }
+          : null,
       };
       onBookingComplete(newAppointment, appliedVoucher);
     } catch (err) {

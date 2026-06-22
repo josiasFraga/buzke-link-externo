@@ -6,6 +6,9 @@ interface ProfessionalSelectorProps {
   selectedProfessionalId: number | null;
   onSelectProfessional: (id: number) => void;
   availableProfessionals?: number[];
+  title?: string;
+  isLoading?: boolean;
+  emptyMessage?: string;
   stickyTitle?: boolean;
   stickyTopClassName?: string;
 }
@@ -15,14 +18,31 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
   selectedProfessionalId,
   onSelectProfessional,
   availableProfessionals = [],
+  title = 'Selecione o Profissional',
+  isLoading = false,
+  emptyMessage = 'Nenhum profissional disponível para este horário.',
   stickyTitle = false,
   stickyTopClassName = ''
 }) => {
   return (
     <div className="mt-6" id="professional-selector-section">
       <div className={stickyTitle ? `sticky z-20 bg-[var(--color-background)] py-2 ${stickyTopClassName}` : 'mb-4'}>
-        <h3 className="theme-text-primary text-lg font-semibold">Selecione o Profissional</h3>
+        <h3 className="theme-text-primary text-lg font-semibold">{title}</h3>
       </div>
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="rounded-lg border border-[var(--color-border)] p-4">
+              <div className="mb-3 aspect-square animate-pulse rounded-full bg-[var(--color-surface-secondary)]" />
+              <div className="mx-auto h-4 w-20 animate-pulse rounded bg-[var(--color-surface-secondary)]" />
+            </div>
+          ))}
+        </div>
+      ) : professionals.length === 0 ? (
+        <div className="theme-panel-warning p-4 text-center">
+          <p className="theme-text-secondary text-sm">{emptyMessage}</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {professionals.map((professional) => {
           const isAvailable = availableProfessionals.includes(professional.usuario.id);
@@ -65,6 +85,7 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
           );
         })}
       </div>
+      )}
     </div>
   );
 };

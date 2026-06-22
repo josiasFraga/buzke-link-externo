@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, ArrowLeft, CheckCircle2, Clock3, Sparkles, Trophy, UserRound } from 'lucide-react';
-import { Appointment, AppointmentSlotInterestType, AppointmentSlots, Service, TimeSlot, Voucher } from '../types';
+import { ArrowLeft, BookOpen, Calendar, CalendarCheck, CheckCircle2, Clock3, Sparkles, Trophy, UserRound } from 'lucide-react';
+import { Appointment, AppointmentSlotInterestType, AppointmentSlots, AvailableTeacher, Service, TimeSlot, Voucher } from '../types';
 import { getBookingSteps } from '../data/mockData';
 import AuthStep from './AuthStep';
 import BookingConfirmation from './BookingConfirmation';
@@ -8,10 +8,12 @@ import BookingSteps from './BookingSteps';
 import ConfirmationStep from './ConfirmationStep';
 import DatePicker from './DatePicker';
 import { createAppointmentSlotInterest } from '../lib/appointment-slot-interests';
+import { buildPublicApiUrl } from '../lib/public-api';
 import { useToast } from './feedback/ToastProvider';
 import useAuthStore from '../store/authStore';
 import Modal from './Modal';
 import PetStep from './PetStep';
+import PaymentCheckout from './PaymentCheckout';
 import ProfessionalSelector from './ProfessionalSelector';
 import SportSelector from './SportSelector';
 import TimeSlotPicker from './TimeSlotPicker';
@@ -38,6 +40,18 @@ interface BookingFlowProps {
 interface PendingInterestRequest {
   slot: TimeSlot;
   type: AppointmentSlotInterestType;
+}
+
+type BookingScheduleType = 'normal' | 'lesson';
+
+function formatDateForTeacherQuery(date: string) {
+  const [year, month, day] = date.split('-');
+
+  return `${day}/${month}/${year}`;
+}
+
+function formatTimeForTeacherQuery(time: string) {
+  return time.length === 5 ? `${time}:00` : time;
 }
 
 function getInterestTypesForSlot(slot: TimeSlot): AppointmentSlotInterestType[] {
@@ -92,6 +106,9 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<number | null>(null);
   const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
+  const [bookingScheduleType, setBookingScheduleType] = useState<BookingScheduleType | null>(null);
+  const [availableLessonTeachers, setAvailableLessonTeachers] = useState<AvailableTeacher[]>([]);
+  const [isLoadingLessonTeachers, setIsLoadingLessonTeachers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
@@ -107,17 +124,36 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const finalStep = bookingSteps.length + 1;
   const timeSlotsLoaded = timeSlots.length > 0;
   const isLoadingTimeSlots = Boolean(selectedDate && !appointmentData);
-  const showProfessionalSelector = Boolean(selectedTimeSlot && appointmentData?.tipo === 'Serviço');
-  const showSportSelector = Boolean(selectedTimeSlot && appointmentData?.tipo === 'Quadra');
+  const selectedTimeSlotTime = selectedTimeSlotData?.time;
+  const selectedSlotAllowsLesson = Boolean(selectedTimeSlotData?.permite_agendamento_aula);
+  const isLessonBooking = selectedSlotAllowsLesson && bookingScheduleType === 'lesson';
+  const canShowNormalBookingFlow = !selectedSlotAllowsLesson || bookingScheduleType === 'normal';
+  const requiresBookingScheduleType = Boolean(selectedTimeSlot && selectedSlotAllowsLesson);
+  const showLessonTypeSelector = Boolean(selectedTimeSlot && selectedSlotAllowsLesson);
+  const showNormalProfessionalSelector = Boolean(selectedTimeSlot && canShowNormalBookingFlow && appointmentData?.tipo === 'Serviço');
+  const showSportSelector = Boolean(selectedTimeSlot && ((canShowNormalBookingFlow && appointmentData?.tipo === 'Quadra') || isLessonBooking));
+  const showLessonTeacherSelector = Boolean(isLessonBooking && selectedSportId && selectedTimeSlotData);
+  const showProfessionalSelector = showNormalProfessionalSelector || showLessonTeacherSelector;
   const stickySectionTopClassName = stickySteps ? 'top-[8.75rem] sm:top-[10.25rem] lg:top-[10.75rem]' : '';
   const sidebarStickyTopClassName = bookingStep === 1 ? 'lg:top-[11.5rem]' : 'lg:top-[8.75rem]';
   const selectedProfessional = useMemo(
-    () => appointmentData?.profissionais?.find((professional) => professional.id === selectedProfessionalId) || null,
-    [appointmentData?.profissionais, selectedProfessionalId]
+    () => {
+      if (isLessonBooking) {
+        return availableLessonTeachers.find((teacher) => teacher.id === selectedProfessionalId) || null;
+      }
+
+      return appointmentData?.profissionais?.find((professional) => professional.id === selectedProfessionalId) || null;
+    },
+    [appointmentData?.profissionais, availableLessonTeachers, isLessonBooking, selectedProfessionalId]
   );
   const selectedSport = useMemo(
     () => appointmentData?.subcategorias?.find((sport) => sport.id === selectedSportId) || null,
     [appointmentData?.subcategorias, selectedSportId]
+  );
+  const selectedSubcategoryId = selectedSport?.subcategoria.id ?? null;
+  const availableLessonTeacherUserIds = useMemo(
+    () => availableLessonTeachers.filter((teacher) => teacher.available).map((teacher) => teacher.usuario.id),
+    [availableLessonTeachers]
   );
   const showDesktopSidebar = showSelectionSidebar && bookingStep < finalStep;
   const selectedServiceImages = useMemo(
@@ -158,12 +194,14 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     },
     {
       id: 'professional',
-      label: appointmentData?.tipo === 'Quadra' ? 'Esporte' : 'Profissional',
-      value: appointmentData?.tipo === 'Quadra'
-        ? selectedSport?.subcategoria.esporte_nome || 'Selecione um esporte'
-        : selectedProfessional?.usuario.nome || (appointmentData?.tipo === 'Serviço' ? 'Selecione um profissional' : 'Nao se aplica'),
-      icon: appointmentData?.tipo === 'Quadra' ? Trophy : UserRound,
-      ready: appointmentData?.tipo === 'Quadra' ? Boolean(selectedSport) : appointmentData?.tipo === 'Serviço' ? Boolean(selectedProfessional) : true,
+      label: isLessonBooking ? 'Professor da aula' : appointmentData?.tipo === 'Quadra' ? 'Esporte' : 'Profissional',
+      value: isLessonBooking
+        ? selectedProfessional?.usuario.nome || (selectedSport ? 'Selecione um professor' : 'Selecione um esporte')
+        : appointmentData?.tipo === 'Quadra'
+          ? selectedSport?.subcategoria.esporte_nome || 'Selecione um esporte'
+          : selectedProfessional?.usuario.nome || (appointmentData?.tipo === 'Serviço' ? 'Selecione um profissional' : 'Nao se aplica'),
+      icon: isLessonBooking ? UserRound : appointmentData?.tipo === 'Quadra' ? Trophy : UserRound,
+      ready: isLessonBooking ? Boolean(selectedProfessional) : appointmentData?.tipo === 'Quadra' ? Boolean(selectedSport) : appointmentData?.tipo === 'Serviço' ? Boolean(selectedProfessional) : true,
     },
   ];
 
@@ -271,6 +309,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
 
     const targetSectionId = showProfessionalSelector
       ? 'professional-selector-section'
+      : showLessonTypeSelector
+        ? 'lesson-type-section'
       : showSportSelector
         ? 'sport-selector-section'
         : null;
@@ -286,7 +326,95 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [selectedTimeSlot, showProfessionalSelector, showSportSelector]);
+  }, [selectedTimeSlot, showLessonTypeSelector, showProfessionalSelector, showSportSelector]);
+
+  useEffect(() => {
+    setAvailableLessonTeachers([]);
+    setIsLoadingLessonTeachers(false);
+
+    if (!selectedTimeSlotTime) {
+      setBookingScheduleType(null);
+      return;
+    }
+
+    if (!selectedSlotAllowsLesson) {
+      setBookingScheduleType('normal');
+      return;
+    }
+
+    setBookingScheduleType(null);
+  }, [selectedSlotAllowsLesson, selectedTimeSlotTime]);
+
+  useEffect(() => {
+    if (!isLessonBooking || !selectedDate || !selectedSubcategoryId || !selectedTimeSlotData) {
+      setAvailableLessonTeachers([]);
+      setIsLoadingLessonTeachers(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const params = new URLSearchParams({
+      esporte_id: selectedSubcategoryId.toString(),
+      data: formatDateForTeacherQuery(selectedDate),
+      horario: formatTimeForTeacherQuery(selectedTimeSlotData.time),
+      duracao: formatTimeForTeacherQuery(selectedTimeSlotData.duration),
+      servico_id: selectedService.id,
+      empresa_id: selectedService.companyId,
+    });
+
+    const headers = token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined;
+
+    setError(null);
+    setIsLoadingLessonTeachers(true);
+
+    fetch(buildPublicApiUrl(`/client-teachers/available?${params.toString()}`), {
+      headers,
+      signal: abortController.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Não foi possível listar os professores disponíveis.');
+        }
+
+        return data as AvailableTeacher[];
+      })
+      .then((teachers) => {
+        setAvailableLessonTeachers(teachers);
+        setSelectedProfessionalId((currentTeacherId) => {
+          if (!currentTeacherId) {
+            return null;
+          }
+
+          const selectedTeacherStillAvailable = teachers.some((teacher) => teacher.id === currentTeacherId && teacher.available);
+
+          return selectedTeacherStillAvailable ? currentTeacherId : null;
+        });
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+
+        setAvailableLessonTeachers([]);
+        setSelectedProfessionalId(null);
+        setError(err instanceof Error ? err.message : 'Não foi possível listar os professores disponíveis.');
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoadingLessonTeachers(false);
+        }
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [isLessonBooking, selectedDate, selectedService.companyId, selectedService.id, selectedSubcategoryId, selectedTimeSlotData, token]);
 
   const handleDateSelect = (date: string) => {
     setError(null);
@@ -295,6 +423,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setPendingInterestRequest(null);
     setInterestSelectionSlot(null);
     setInterestSelectionType(null);
+    setBookingScheduleType(null);
+    setAvailableLessonTeachers([]);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
     onSelectDate(date);
@@ -304,9 +434,34 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setError(null);
     setInterestError(null);
     setInterestSuccess(null);
+    setBookingScheduleType(null);
+    setAvailableLessonTeachers([]);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
     onSelectTimeSlot(timeSlotId);
+  };
+
+  const handleBookingScheduleTypeChange = (type: BookingScheduleType) => {
+    setError(null);
+    setBookingScheduleType(type);
+    setSelectedProfessionalId(null);
+
+    if (type === 'normal' && appointmentData?.tipo !== 'Quadra') {
+      setSelectedSportId(null);
+    }
+
+    if (type === 'normal') {
+      setAvailableLessonTeachers([]);
+    }
+  };
+
+  const handleSportSelect = (sportId: number) => {
+    setError(null);
+    setSelectedSportId(sportId);
+
+    if (isLessonBooking) {
+      setSelectedProfessionalId(null);
+    }
   };
 
   const submitSlotInterest = async (slot: TimeSlot, type: AppointmentSlotInterestType) => {
@@ -401,13 +556,23 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setError(null);
 
     if (bookingStep === 1) {
-      if (appointmentData?.tipo === 'Serviço' && !selectedProfessionalId) {
+      if (requiresBookingScheduleType && !bookingScheduleType) {
+        setError('Por favor, selecione se deseja agendamento normal ou aula');
+        return;
+      }
+
+      if (showNormalProfessionalSelector && !selectedProfessionalId) {
         setError('Por favor, selecione um profissional');
         return;
       }
 
-      if (appointmentData?.tipo === 'Quadra' && !selectedSportId) {
+      if (showSportSelector && !selectedSportId) {
         setError('Por favor, selecione um esporte');
+        return;
+      }
+
+      if (showLessonTeacherSelector && !selectedProfessionalId) {
+        setError('Por favor, selecione o professor da aula');
         return;
       }
     }
@@ -436,6 +601,16 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setAppointment(newAppointment);
     setAppliedVoucher(voucher);
     setBookingStep(finalStep);
+  };
+
+  const handlePaymentComplete = () => {
+    setAppointment((currentAppointment) => currentAppointment
+      ? {
+          ...currentAppointment,
+          payment: null,
+        }
+      : currentAppointment
+    );
   };
 
   const handleAuthStepSuccess = () => {
@@ -493,25 +668,70 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
               interestLoadingAppointmentId={interestLoadingAppointmentId}
             />
           ) : null}
-          {showProfessionalSelector && appointmentData?.profissionais && selectedTimeSlotData ? (
+          {showLessonTypeSelector ? (
+            <div className="mt-6" id="lesson-type-section">
+              <div className={stickySteps ? `sticky z-20 bg-[var(--color-background)] py-2 ${stickySectionTopClassName}` : 'mb-4'}>
+                <h3 className="theme-text-primary flex items-center text-lg font-semibold">
+                  <BookOpen size={20} className="theme-text-accent mr-2" />
+                  Tipo de agendamento
+                </h3>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => handleBookingScheduleTypeChange('normal')}
+                  className={`rounded-xl border p-4 text-left transition-colors ${
+                    bookingScheduleType === 'normal'
+                      ? 'border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))]'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
+                  }`}
+                >
+                  <span className="theme-text-primary flex items-center gap-2 font-semibold">
+                    <CalendarCheck size={18} className="theme-text-accent" />
+                    Agendamento normal
+                  </span>
+                  <span className="theme-text-secondary mt-1 block text-sm">Reserva o horário sem professor de aula.</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBookingScheduleTypeChange('lesson')}
+                  className={`rounded-xl border p-4 text-left transition-colors ${
+                    bookingScheduleType === 'lesson'
+                      ? 'border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))]'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
+                  }`}
+                >
+                  <span className="theme-text-primary flex items-center gap-2 font-semibold">
+                    <BookOpen size={18} className="theme-text-accent" />
+                    Aula com professor
+                  </span>
+                  <span className="theme-text-secondary mt-1 block text-sm">Escolha esporte e professor disponíveis neste horário.</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {showSportSelector && appointmentData?.subcategorias ? (
+            <SportSelector sports={appointmentData.subcategorias} selectedSportId={selectedSportId} onSelectSport={handleSportSelect} stickyTitle={stickySteps} stickyTopClassName={stickySectionTopClassName} />
+          ) : null}
+          {showProfessionalSelector && selectedTimeSlotData ? (
             <ProfessionalSelector
-              professionals={appointmentData.profissionais}
+              professionals={isLessonBooking ? availableLessonTeachers : appointmentData?.profissionais || []}
               selectedProfessionalId={selectedProfessionalId}
               onSelectProfessional={setSelectedProfessionalId}
-              availableProfessionals={selectedTimeSlotData.availableProfessionals}
+              availableProfessionals={isLessonBooking ? availableLessonTeacherUserIds : selectedTimeSlotData.availableProfessionals}
+              title={isLessonBooking ? 'Selecione o professor da aula' : 'Selecione o Profissional'}
+              isLoading={isLessonBooking ? isLoadingLessonTeachers : false}
+              emptyMessage="Nenhum professor disponível para esse esporte e horário."
               stickyTitle={stickySteps}
               stickyTopClassName={stickySectionTopClassName}
             />
-          ) : null}
-          {showSportSelector && appointmentData?.subcategorias ? (
-            <SportSelector sports={appointmentData.subcategorias} selectedSportId={selectedSportId} onSelectSport={setSelectedSportId} stickyTitle={stickySteps} stickyTopClassName={stickySectionTopClassName} />
           ) : null}
           {selectedDate && selectedTimeSlot ? (
             <div className="mt-8" id="booking-continue-section">
               <button
                 type="button"
                 onClick={handleNextStep}
-                disabled={!selectedTimeSlot || (showProfessionalSelector && !selectedProfessionalId) || (showSportSelector && !selectedSportId)}
+                disabled={!selectedTimeSlot || (requiresBookingScheduleType && !bookingScheduleType) || (showProfessionalSelector && !selectedProfessionalId) || (showSportSelector && !selectedSportId) || isLoadingLessonTeachers}
                 className="theme-primary-btn w-full px-4 py-3 font-medium"
               >
                 Continuar
@@ -552,8 +772,11 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           selectedDate={selectedDate!}
           selectedTimeSlotData={selectedTimeSlotData!}
           selectedProfessionalId={selectedProfessionalId}
+          selectedProfessionalUserId={selectedProfessional?.usuario.id ?? null}
           selectedSportId={selectedSportId}
+          selectedSubcategoryId={selectedSubcategoryId}
           selectedPetId={selectedPetId}
+          isLessonBooking={isLessonBooking}
           appointmentData={appointmentData}
           onBookingComplete={handleBookingComplete}
         />
@@ -599,7 +822,11 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       ) : null}
 
       {bookingStep === finalStep && appointment ? (
-        <BookingConfirmation appointment={appointment} service={selectedService} appliedVoucher={appliedVoucher} />
+        appointment.payment?.required ? (
+          <PaymentCheckout appointment={appointment} service={selectedService} onPaymentComplete={handlePaymentComplete} />
+        ) : (
+          <BookingConfirmation appointment={appointment} service={selectedService} appliedVoucher={appliedVoucher} />
+        )
       ) : (
         <div className={showDesktopSidebar ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6 lg:items-start' : ''}>
           <div className="min-w-0">
