@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BookOpen, Calendar, CalendarCheck, CheckCircle2, Clock3, Sparkles, Trophy, UserRound } from 'lucide-react';
-import { Appointment, AppointmentSlotInterestType, AppointmentSlots, AvailableTeacher, Service, TimeSlot, Voucher } from '../types';
+import { Appointment, AppointmentSlotInterestType, AppointmentSlots, AvailableTeacher, LessonType, Service, TimeSlot, Voucher } from '../types';
 import { getBookingSteps } from '../data/mockData';
 import AuthStep from './AuthStep';
 import BookingConfirmation from './BookingConfirmation';
@@ -16,6 +16,7 @@ import PetStep from './PetStep';
 import PaymentCheckout from './PaymentCheckout';
 import ProfessionalSelector from './ProfessionalSelector';
 import SportSelector from './SportSelector';
+import LessonTypeSelector from './LessonTypeSelector';
 import TimeSlotPicker from './TimeSlotPicker';
 import { useTheme } from './theme/ThemeProvider';
 import { getServiceImageSources } from '../lib/service-images';
@@ -40,6 +41,10 @@ interface BookingFlowProps {
 interface PendingInterestRequest {
   slot: TimeSlot;
   type: AppointmentSlotInterestType;
+}
+
+interface LessonTypeListResponse {
+  items: LessonType[];
 }
 
 type BookingScheduleType = 'normal' | 'lesson';
@@ -78,6 +83,13 @@ function getInterestTypeDescription(type: AppointmentSlotInterestType) {
     : 'Você recebe aviso se esse horário for cancelado nesta data. Se a vaga abrir, você decide depois se quer ficar com ela.';
 }
 
+function formatCurrency(value: number) {
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
 const BookingFlow: React.FC<BookingFlowProps> = ({
   selectedService,
   selectedDate,
@@ -106,7 +118,10 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<number | null>(null);
   const [selectedSportId, setSelectedSportId] = useState<number | null>(null);
+  const [selectedLessonTypeId, setSelectedLessonTypeId] = useState<number | null>(null);
   const [bookingScheduleType, setBookingScheduleType] = useState<BookingScheduleType | null>(null);
+  const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
+  const [isLoadingLessonTypes, setIsLoadingLessonTypes] = useState(false);
   const [availableLessonTeachers, setAvailableLessonTeachers] = useState<AvailableTeacher[]>([]);
   const [isLoadingLessonTeachers, setIsLoadingLessonTeachers] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +147,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const showLessonTypeSelector = Boolean(selectedTimeSlot && selectedSlotAllowsLesson);
   const showNormalProfessionalSelector = Boolean(selectedTimeSlot && canShowNormalBookingFlow && appointmentData?.tipo === 'Serviço');
   const showSportSelector = Boolean(selectedTimeSlot && ((canShowNormalBookingFlow && appointmentData?.tipo === 'Quadra') || isLessonBooking));
-  const showLessonTeacherSelector = Boolean(isLessonBooking && selectedSportId && selectedTimeSlotData);
+  const showLessonClassTypeSelector = Boolean(isLessonBooking && selectedSportId);
+  const showLessonTeacherSelector = Boolean(isLessonBooking && selectedSportId && selectedLessonTypeId && selectedTimeSlotData);
   const showProfessionalSelector = showNormalProfessionalSelector || showLessonTeacherSelector;
   const stickySectionTopClassName = stickySteps ? 'top-[8.75rem] sm:top-[10.25rem] lg:top-[10.75rem]' : '';
   const sidebarStickyTopClassName = bookingStep === 1 ? 'lg:top-[11.5rem]' : 'lg:top-[8.75rem]';
@@ -150,10 +166,32 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     () => appointmentData?.subcategorias?.find((sport) => sport.id === selectedSportId) || null,
     [appointmentData?.subcategorias, selectedSportId]
   );
+  const selectedLessonType = useMemo(
+    () => lessonTypes.find((lessonType) => lessonType.id === selectedLessonTypeId) || null,
+    [lessonTypes, selectedLessonTypeId]
+  );
+  const selectedLessonTypePrice = useMemo(() => {
+    if (!isLessonBooking || !selectedLessonTypeId || !selectedProfessionalId) {
+      return null;
+    }
+
+    const selectedTeacher = availableLessonTeachers.find((teacher) => teacher.id === selectedProfessionalId);
+
+    return selectedTeacher?.precos_tipos_aula?.find((price) => price.cliente_aula_tipo_id === selectedLessonTypeId) || null;
+  }, [availableLessonTeachers, isLessonBooking, selectedLessonTypeId, selectedProfessionalId]);
+  const sidebarPriceValue = isLessonBooking ? (selectedLessonTypePrice?.valor ?? null) : selectedService.price;
+  const sidebarPriceLabel = isLessonBooking ? 'Valor da aula' : 'Valor inicial';
+  const sidebarPriceDisplay = sidebarPriceValue && sidebarPriceValue > 0
+    ? formatCurrency(sidebarPriceValue)
+    : isLessonBooking && selectedLessonType
+      ? 'Selecione um professor'
+      : 'Consulte';
   const selectedSubcategoryId = selectedSport?.subcategoria.id ?? null;
   const availableLessonTeacherUserIds = useMemo(
-    () => availableLessonTeachers.filter((teacher) => teacher.available).map((teacher) => teacher.usuario.id),
-    [availableLessonTeachers]
+    () => availableLessonTeachers
+      .filter((teacher) => teacher.available && (!selectedLessonTypeId || teacher.precos_tipos_aula.some((price) => price.cliente_aula_tipo_id === selectedLessonTypeId)))
+      .map((teacher) => teacher.usuario.id),
+    [availableLessonTeachers, selectedLessonTypeId]
   );
   const showDesktopSidebar = showSelectionSidebar && bookingStep < finalStep;
   const selectedServiceImages = useMemo(
@@ -192,6 +230,15 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       icon: Clock3,
       ready: Boolean(selectedTimeSlot),
     },
+    ...(isLessonBooking
+      ? [{
+          id: 'lessonType',
+          label: 'Tipo de aula',
+          value: selectedLessonType?.nome || 'Selecione um tipo de aula',
+          icon: BookOpen,
+          ready: Boolean(selectedLessonType),
+        }]
+      : []),
     {
       id: 'professional',
       label: isLessonBooking ? 'Professor da aula' : appointmentData?.tipo === 'Quadra' ? 'Esporte' : 'Profissional',
@@ -309,6 +356,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
 
     const targetSectionId = showProfessionalSelector
       ? 'professional-selector-section'
+      : showLessonClassTypeSelector
+        ? 'lesson-type-selector-section'
       : showLessonTypeSelector
         ? 'lesson-type-section'
       : showSportSelector
@@ -326,11 +375,14 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [selectedTimeSlot, showLessonTypeSelector, showProfessionalSelector, showSportSelector]);
+  }, [selectedTimeSlot, showLessonClassTypeSelector, showLessonTypeSelector, showProfessionalSelector, showSportSelector]);
 
   useEffect(() => {
     setAvailableLessonTeachers([]);
     setIsLoadingLessonTeachers(false);
+    setLessonTypes([]);
+    setIsLoadingLessonTypes(false);
+    setSelectedLessonTypeId(null);
 
     if (!selectedTimeSlotTime) {
       setBookingScheduleType(null);
@@ -346,7 +398,76 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   }, [selectedSlotAllowsLesson, selectedTimeSlotTime]);
 
   useEffect(() => {
-    if (!isLessonBooking || !selectedDate || !selectedSubcategoryId || !selectedTimeSlotData) {
+    if (!isLessonBooking || !selectedSubcategoryId) {
+      setLessonTypes([]);
+      setIsLoadingLessonTypes(false);
+      setSelectedLessonTypeId(null);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const params = new URLSearchParams({
+      empresa_id: selectedService.companyId,
+      esporte_id: selectedSubcategoryId.toString(),
+    });
+
+    const headers = token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined;
+
+    setError(null);
+    setIsLoadingLessonTypes(true);
+
+    fetch(buildPublicApiUrl(`/client-lesson-types/public?${params.toString()}`), {
+      headers,
+      signal: abortController.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Não foi possível listar os tipos de aula.');
+        }
+
+        return data as LessonTypeListResponse;
+      })
+      .then((result) => {
+        const types = result.items || [];
+        setLessonTypes(types);
+        setSelectedLessonTypeId((currentTypeId) => {
+          if (!currentTypeId) {
+            return null;
+          }
+
+          const selectedTypeStillAvailable = types.some((lessonType) => lessonType.id === currentTypeId);
+
+          return selectedTypeStillAvailable ? currentTypeId : null;
+        });
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+
+        setLessonTypes([]);
+        setSelectedLessonTypeId(null);
+        setError(err instanceof Error ? err.message : 'Não foi possível listar os tipos de aula.');
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoadingLessonTypes(false);
+        }
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [isLessonBooking, selectedService.companyId, selectedSubcategoryId, token]);
+
+  useEffect(() => {
+    if (!isLessonBooking || !selectedDate || !selectedSubcategoryId || !selectedLessonTypeId || !selectedTimeSlotData) {
       setAvailableLessonTeachers([]);
       setIsLoadingLessonTeachers(false);
       return;
@@ -358,6 +479,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       data: formatDateForTeacherQuery(selectedDate),
       horario: formatTimeForTeacherQuery(selectedTimeSlotData.time),
       duracao: formatTimeForTeacherQuery(selectedTimeSlotData.duration),
+      cliente_aula_tipo_id: selectedLessonTypeId.toString(),
       servico_id: selectedService.id,
       empresa_id: selectedService.companyId,
     });
@@ -391,7 +513,13 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
             return null;
           }
 
-          const selectedTeacherStillAvailable = teachers.some((teacher) => teacher.id === currentTeacherId && teacher.available);
+          const selectedTeacherStillAvailable = teachers.some(
+            (teacher) => (
+              teacher.id === currentTeacherId
+              && teacher.available
+              && teacher.precos_tipos_aula.some((price) => price.cliente_aula_tipo_id === selectedLessonTypeId)
+            )
+          );
 
           return selectedTeacherStillAvailable ? currentTeacherId : null;
         });
@@ -414,7 +542,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return () => {
       abortController.abort();
     };
-  }, [isLessonBooking, selectedDate, selectedService.companyId, selectedService.id, selectedSubcategoryId, selectedTimeSlotData, token]);
+  }, [isLessonBooking, selectedDate, selectedLessonTypeId, selectedService.companyId, selectedService.id, selectedSubcategoryId, selectedTimeSlotData, token]);
 
   const handleDateSelect = (date: string) => {
     setError(null);
@@ -424,6 +552,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setInterestSelectionSlot(null);
     setInterestSelectionType(null);
     setBookingScheduleType(null);
+    setSelectedLessonTypeId(null);
+    setLessonTypes([]);
     setAvailableLessonTeachers([]);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
@@ -435,6 +565,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setInterestError(null);
     setInterestSuccess(null);
     setBookingScheduleType(null);
+    setSelectedLessonTypeId(null);
+    setLessonTypes([]);
     setAvailableLessonTeachers([]);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
@@ -444,6 +576,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const handleBookingScheduleTypeChange = (type: BookingScheduleType) => {
     setError(null);
     setBookingScheduleType(type);
+    setSelectedLessonTypeId(null);
     setSelectedProfessionalId(null);
 
     if (type === 'normal' && appointmentData?.tipo !== 'Quadra') {
@@ -451,6 +584,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     }
 
     if (type === 'normal') {
+      setLessonTypes([]);
       setAvailableLessonTeachers([]);
     }
   };
@@ -458,10 +592,17 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const handleSportSelect = (sportId: number) => {
     setError(null);
     setSelectedSportId(sportId);
+    setSelectedLessonTypeId(null);
 
     if (isLessonBooking) {
       setSelectedProfessionalId(null);
     }
+  };
+
+  const handleLessonTypeSelect = (lessonTypeId: number) => {
+    setError(null);
+    setSelectedLessonTypeId(lessonTypeId);
+    setSelectedProfessionalId(null);
   };
 
   const submitSlotInterest = async (slot: TimeSlot, type: AppointmentSlotInterestType) => {
@@ -571,8 +712,18 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
         return;
       }
 
+      if (showLessonClassTypeSelector && !selectedLessonTypeId) {
+        setError('Por favor, selecione o tipo de aula');
+        return;
+      }
+
       if (showLessonTeacherSelector && !selectedProfessionalId) {
         setError('Por favor, selecione o professor da aula');
+        return;
+      }
+
+      if (isLessonBooking && selectedLessonTypeId && selectedProfessionalId && !selectedLessonTypePrice) {
+        setError('Não encontramos preço para o tipo de aula selecionado com este professor. Escolha outro professor.');
         return;
       }
     }
@@ -648,7 +799,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                   </div>
                   <div>
                     <p className="theme-text-primary text-sm font-medium">Duração: {selectedService.duration}</p>
-                    <p className="theme-text-accent text-xs">Preço: R$ {selectedService.price}</p>
+                    <p className="theme-text-accent text-xs">Preço: {sidebarPriceDisplay}</p>
                   </div>
                 </div>
               </div>
@@ -713,6 +864,16 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           {showSportSelector && appointmentData?.subcategorias ? (
             <SportSelector sports={appointmentData.subcategorias} selectedSportId={selectedSportId} onSelectSport={handleSportSelect} stickyTitle={stickySteps} stickyTopClassName={stickySectionTopClassName} />
           ) : null}
+          {showLessonClassTypeSelector ? (
+            <LessonTypeSelector
+              lessonTypes={lessonTypes}
+              selectedLessonTypeId={selectedLessonTypeId}
+              onSelectLessonType={handleLessonTypeSelect}
+              isLoading={isLoadingLessonTypes}
+              stickyTitle={stickySteps}
+              stickyTopClassName={stickySectionTopClassName}
+            />
+          ) : null}
           {showProfessionalSelector && selectedTimeSlotData ? (
             <ProfessionalSelector
               professionals={isLessonBooking ? availableLessonTeachers : appointmentData?.profissionais || []}
@@ -731,7 +892,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
               <button
                 type="button"
                 onClick={handleNextStep}
-                disabled={!selectedTimeSlot || (requiresBookingScheduleType && !bookingScheduleType) || (showProfessionalSelector && !selectedProfessionalId) || (showSportSelector && !selectedSportId) || isLoadingLessonTeachers}
+                disabled={!selectedTimeSlot || (requiresBookingScheduleType && !bookingScheduleType) || (showProfessionalSelector && !selectedProfessionalId) || (showSportSelector && !selectedSportId) || (showLessonClassTypeSelector && !selectedLessonTypeId) || isLoadingLessonTypes || isLoadingLessonTeachers}
                 className="theme-primary-btn w-full px-4 py-3 font-medium"
               >
                 Continuar
@@ -776,6 +937,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           selectedSportId={selectedSportId}
           selectedSubcategoryId={selectedSubcategoryId}
           selectedPetId={selectedPetId}
+          selectedLessonType={selectedLessonType}
+          selectedLessonTypePrice={selectedLessonTypePrice}
           isLessonBooking={isLessonBooking}
           appointmentData={appointmentData}
           onBookingComplete={handleBookingComplete}
@@ -854,12 +1017,10 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
 
                 <div className="mt-4 flex items-center justify-between rounded-[1rem] border border-[var(--color-border)] bg-[color:color-mix(in_srgb,var(--color-surface-secondary)_72%,transparent)] px-4 py-3">
                   <div>
-                    <p className="theme-text-muted text-xs font-semibold uppercase tracking-[0.14em]">Valor inicial</p>
+                    <p className="theme-text-muted text-xs font-semibold uppercase tracking-[0.14em]">{sidebarPriceLabel}</p>
                     <p className="theme-text-primary mt-1 text-sm">{selectedService.duration}</p>
                   </div>
-                  <p className="theme-text-accent text-xl font-bold">
-                    {selectedService.price > 0 ? `R$ ${selectedService.price}` : 'Consulte'}
-                  </p>
+                  <p className="theme-text-accent text-xl font-bold">{sidebarPriceDisplay}</p>
                 </div>
 
                 <div className="mt-5 space-y-3">

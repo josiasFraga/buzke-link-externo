@@ -38,11 +38,34 @@ export interface AvailableTeacher extends Professional {
   cliente_id: number;
   usuario_id: number;
   available: boolean;
+  precos_tipos_aula: TeacherLessonTypePrice[];
   esportes: Array<{
     id: number;
     nome: string;
     esporte_nome?: string | null;
   }>;
+}
+
+export interface TeacherLessonTypePrice {
+  id: number;
+  cliente_aula_tipo_id: number;
+  tipo_aula_nome?: string | null;
+  valor: number;
+  valor_fixo: number;
+}
+
+export interface LessonTypeSport {
+  id: number;
+  nome: string;
+  esporte_nome?: string | null;
+}
+
+export interface LessonType {
+  id: number;
+  cliente_id: number;
+  nome: string;
+  descricao: string;
+  esportes: LessonTypeSport[];
 }
 
 export interface Service {

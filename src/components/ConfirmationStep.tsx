@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Appointment, AppointmentPaymentMethod, AppointmentSlots, Service, TimeSlot, Voucher } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Appointment, AppointmentPaymentMethod, AppointmentSlots, LessonType, Service, TeacherLessonTypePrice, TimeSlot, Voucher } from '../types';
 import useAuthStore from '../store/authStore';
 import moment from '../utils/moment-pt-br';
 import RecurringOptions from './Forms/RecurringOptions';
@@ -17,6 +17,8 @@ interface ConfirmationStepProps {
   selectedSportId: number | null;
   selectedSubcategoryId: number | null;
   selectedPetId: number | null;
+  selectedLessonType: LessonType | null;
+  selectedLessonTypePrice: TeacherLessonTypePrice | null;
   isLessonBooking?: boolean;
   appointmentData: AppointmentSlots | null;
   onBookingComplete: (appointment: Appointment, voucher: Voucher | null) => void;
@@ -36,6 +38,7 @@ interface AppointmentCreatePayload {
   pet_id?: number;
   vouchersIds?: number[];
   agendamento_aula?: boolean;
+  cliente_aula_tipo_id?: number;
   selectedSport?: number;
   valor_final: number;
 }
@@ -96,6 +99,8 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedSportId,
   selectedSubcategoryId,
   selectedPetId,
+  selectedLessonType,
+  selectedLessonTypePrice,
   isLessonBooking = false,
   appointmentData,
   onBookingComplete,
@@ -119,10 +124,22 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   const [isAtHome, setIsAtHome] = useState(selectedTimeSlotData?.only_at_home || false);
   const [address, setAddress] = useState('');
 
-  const [totalPrice, setTotalPrice] = useState(selectedTimeSlotData.default_value);
+  const basePrice = useMemo(() => {
+    if (!isLessonBooking || !selectedLessonType || !selectedLessonTypePrice) {
+      return selectedTimeSlotData.default_value;
+    }
+
+    if (isRecurring) {
+      return selectedLessonTypePrice.valor_fixo;
+    }
+
+    return selectedLessonTypePrice.valor;
+  }, [isLessonBooking, isRecurring, selectedLessonType, selectedLessonTypePrice, selectedTimeSlotData.default_value]);
+
+  const [totalPrice, setTotalPrice] = useState(basePrice);
 
   useEffect(() => {
-    let currentPrice = selectedTimeSlotData.default_value;
+    let currentPrice = basePrice;
     if (appliedVoucher) {
       if (appliedVoucher.tipo_desconto === 'P' && appliedVoucher.porcentagem_desconto) {
         currentPrice -= currentPrice * (parseFloat(appliedVoucher.porcentagem_desconto) / 100);
@@ -131,7 +148,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       }
     }
     setTotalPrice(Math.max(0, currentPrice));
-  }, [selectedTimeSlotData, appliedVoucher]);
+  }, [appliedVoucher, basePrice]);
 
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -164,6 +181,17 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       setError("Você precisa estar logado para agendar.");
       return;
     }
+
+    if (isLessonBooking && !selectedLessonType) {
+      setError('Selecione o tipo de aula para continuar.');
+      return;
+    }
+
+    if (isLessonBooking && !selectedLessonTypePrice) {
+      setError('Não encontramos preço para este tipo de aula com o professor selecionado.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -189,6 +217,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         }),
         ...(professionalUserId && { profissional_id: professionalUserId }),
         agendamento_aula: isLessonBooking,
+        ...(isLessonBooking && selectedLessonType ? { cliente_aula_tipo_id: selectedLessonType.id } : {}),
         ...(selectedSubcategoryId && { selectedSport: selectedSubcategoryId, subcategoria_id: selectedSubcategoryId }),
         ...(selectedPetId && { pet_id: selectedPetId }),
         ...(appliedVoucher && { vouchersIds: [appliedVoucher.id] }),
@@ -261,10 +290,13 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
             <p className="theme-text-secondary mt-1 text-sm">
               {moment(selectedDate).format('dddd, DD [de] MMMM [de] YYYY')} às {selectedTimeSlotData.time}
             </p>
+            {isLessonBooking && selectedLessonType ? (
+              <p className="theme-text-secondary mt-1 text-sm">{selectedLessonType.nome}</p>
+            ) : null}
             <div className="mt-2">
               {appliedVoucher ? (
                 <div className="flex items-center gap-2">
-                  <span className="theme-text-muted line-through">R$ {selectedTimeSlotData.default_value.toFixed(2)}</span>
+                  <span className="theme-text-muted line-through">R$ {basePrice.toFixed(2)}</span>
                   <span className="theme-text-success text-lg font-medium">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               ) : (

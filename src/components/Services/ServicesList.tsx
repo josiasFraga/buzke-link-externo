@@ -34,8 +34,8 @@ interface RawService {
   slug?: string;
   nome: string;
   descricao: string;
-  horarios_atendimento: RawServiceSchedule[];
-  fotos: RawServicePhoto[];
+  horarios_atendimento?: RawServiceSchedule[];
+  fotos?: RawServicePhoto[];
   media_avaliacoes?: number;
   _media_avaliacoes?: number;
   total_avaliacoes?: string | number;
@@ -82,23 +82,28 @@ const ServicesList: React.FC<ServicesListProps> = ({
         fetch(slugsUrl).catch(() => null),
       ]);
 
-      const data: RawService[] = await servicesResponse.json();
+      const data = await servicesResponse.json();
+      const rawServices: RawService[] = Array.isArray(data) ? data : [];
       const slugPayload = slugsResponse?.ok ? await slugsResponse.json() : [];
       const slugEntries = parseServiceSlugEntries(slugPayload);
 
-      const transformedServices: Service[] = data.map((service) => ({
-        id: service.id.toString(),
-        slug: service.slug?.trim() || undefined,
-        companyId: id,
-        name: service.nome,
-        description: service.descricao,
-        duration: formatDuration(service.horarios_atendimento[0].duracao),
-        price: service.horarios_atendimento[0].valor_padrao,
-        images: service.fotos.map((foto) => foto.imagem).filter(Boolean),
-        rating: getServiceRatingValue(service),
-        reviewCount: getServiceReviewCount(service),
-        tipo: service.tipo
-      }));
+      const transformedServices: Service[] = rawServices.map((service) => {
+        const firstSchedule = service.horarios_atendimento?.[0];
+
+        return {
+          id: service.id.toString(),
+          slug: service.slug?.trim() || undefined,
+          companyId: id,
+          name: service.nome,
+          description: service.descricao,
+          duration: firstSchedule?.duracao ? formatDuration(firstSchedule.duracao) : 'Consulte',
+          price: firstSchedule?.valor_padrao ?? 0,
+          images: (service.fotos || []).map((foto) => foto.imagem).filter(Boolean),
+          rating: getServiceRatingValue(service),
+          reviewCount: getServiceReviewCount(service),
+          tipo: service.tipo,
+        };
+      });
 
       setServices(mergeServicesWithSlugEntries(transformedServices, slugEntries));
     } catch (err) {
