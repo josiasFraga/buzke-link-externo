@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Service, TimeSlot, AppointmentSlots, Appointment, Voucher } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Appointment, AppointmentPaymentMethod, AppointmentSlots, LessonType, Service, TeacherLessonTypePrice, TimeSlot, Voucher } from '../types';
 import useAuthStore from '../store/authStore';
 import moment from '../utils/moment-pt-br';
 import RecurringOptions from './Forms/RecurringOptions';
@@ -13,8 +13,13 @@ interface ConfirmationStepProps {
   selectedDate: string;
   selectedTimeSlotData: TimeSlot;
   selectedProfessionalId: number | null;
+  selectedProfessionalUserId: number | null;
   selectedSportId: number | null;
+  selectedSubcategoryId: number | null;
   selectedPetId: number | null;
+  selectedLessonType: LessonType | null;
+  selectedLessonTypePrice: TeacherLessonTypePrice | null;
+  isLessonBooking?: boolean;
   appointmentData: AppointmentSlots | null;
   onBookingComplete: (appointment: Appointment, voucher: Voucher | null) => void;
 }
@@ -32,7 +37,57 @@ interface AppointmentCreatePayload {
   subcategoria_id?: number;
   pet_id?: number;
   vouchersIds?: number[];
+  agendamento_aula?: boolean;
+  cliente_aula_tipo_id?: number;
+  selectedSport?: number;
   valor_final: number;
+}
+
+interface AppointmentCreateResponse {
+  id: number;
+  message?: string;
+  ids?: number[];
+  payment_id?: number | null;
+  appointment_status?: string;
+  payment_required?: boolean;
+  payment_percentage?: number | null;
+  required_payment_amount?: number | string | null;
+  payment_gateway?: string | null;
+  accepted_payment_methods?: Array<'pix' | 'cartao' | string>;
+  reserva_expira_em?: string | null;
+  reservation_expires_at?: string | null;
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizePaymentMethods(methods: AppointmentCreateResponse['accepted_payment_methods']): AppointmentPaymentMethod[] {
+  const normalizedMethods = (methods || [])
+    .map((method) => String(method).trim().toLowerCase())
+    .map((method): AppointmentPaymentMethod | null => {
+      if (method === 'pix') {
+        return 'pix';
+      }
+
+      if (method === 'cartao' || method === 'cartão' || method === 'card' || method === 'credit_card') {
+        return 'cartao';
+      }
+
+      return null;
+    })
+    .filter((method): method is AppointmentPaymentMethod => Boolean(method));
+
+  return normalizedMethods.length ? normalizedMethods : ['pix'];
 }
 
 const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
@@ -40,8 +95,13 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedDate,
   selectedTimeSlotData,
   selectedProfessionalId,
+  selectedProfessionalUserId,
   selectedSportId,
+  selectedSubcategoryId,
   selectedPetId,
+  selectedLessonType,
+  selectedLessonTypePrice,
+  isLessonBooking = false,
   appointmentData,
   onBookingComplete,
 }) => {
@@ -64,10 +124,22 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   const [isAtHome, setIsAtHome] = useState(selectedTimeSlotData?.only_at_home || false);
   const [address, setAddress] = useState('');
 
-  const [totalPrice, setTotalPrice] = useState(selectedTimeSlotData.default_value);
+  const basePrice = useMemo(() => {
+    if (!isLessonBooking || !selectedLessonType || !selectedLessonTypePrice) {
+      return selectedTimeSlotData.default_value;
+    }
+
+    if (isRecurring) {
+      return selectedLessonTypePrice.valor_fixo;
+    }
+
+    return selectedLessonTypePrice.valor;
+  }, [isLessonBooking, isRecurring, selectedLessonType, selectedLessonTypePrice, selectedTimeSlotData.default_value]);
+
+  const [totalPrice, setTotalPrice] = useState(basePrice);
 
   useEffect(() => {
-    let currentPrice = selectedTimeSlotData.default_value;
+    let currentPrice = basePrice;
     if (appliedVoucher) {
       if (appliedVoucher.tipo_desconto === 'P' && appliedVoucher.porcentagem_desconto) {
         currentPrice -= currentPrice * (parseFloat(appliedVoucher.porcentagem_desconto) / 100);
@@ -76,7 +148,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       }
     }
     setTotalPrice(Math.max(0, currentPrice));
-  }, [selectedTimeSlotData, appliedVoucher]);
+  }, [appliedVoucher, basePrice]);
 
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -109,6 +181,17 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       setError("Você precisa estar logado para agendar.");
       return;
     }
+
+    if (isLessonBooking && !selectedLessonType) {
+      setError('Selecione o tipo de aula para continuar.');
+      return;
+    }
+
+    if (isLessonBooking && !selectedLessonTypePrice) {
+      setError('Não encontramos preço para este tipo de aula com o professor selecionado.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -119,6 +202,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       const selectedProfessional = appointmentData?.profissionais?.find(
         prof => prof.id === selectedProfessionalId
       );
+      const professionalUserId = selectedProfessionalUserId || selectedProfessional?.usuario.id;
 
       const payload: AppointmentCreatePayload = {
         cliente_id: parseInt(selectedService.companyId),
@@ -131,8 +215,10 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
           ilimitado: recurringDuration === '12M' ? 'Y' : 'N',
           limite: recurringDuration !== '12M' ? recurringDuration : undefined,
         }),
-        ...(selectedProfessional && { profissional_id: selectedProfessional.usuario.id }),
-        ...(selectedSportId && { subcategoria_id: selectedSportId }),
+        ...(professionalUserId && { profissional_id: professionalUserId }),
+        agendamento_aula: isLessonBooking,
+        ...(isLessonBooking && selectedLessonType ? { cliente_aula_tipo_id: selectedLessonType.id } : {}),
+        ...(selectedSubcategoryId && { selectedSport: selectedSubcategoryId, subcategoria_id: selectedSubcategoryId }),
         ...(selectedPetId && { pet_id: selectedPetId }),
         ...(appliedVoucher && { vouchersIds: [appliedVoucher.id] }),
         valor_final: totalPrice,
@@ -144,23 +230,39 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data: AppointmentCreateResponse = await response.json();
       if (!response.ok) throw new Error(data.message || 'Erro ao criar agendamento');
+
+      const paymentRequired = Boolean(data.payment_required && data.payment_id);
 
       const newAppointment: Appointment = {
         id: data.id.toString(),
+        ids: data.ids,
         serviceId: selectedService.id,
         date: selectedDate,
         timeSlot: selectedTimeSlotData.time,
         customerName: user.nome,
         customerEmail: user.email,
         isRecurring,
+        isLessonBooking,
         isAtHome,
         address: isAtHome ? address : undefined,
-        professionalId: selectedProfessional?.usuario.id,
+        professionalId: professionalUserId,
         sportId: selectedSportId || undefined,
         pet_id: selectedPetId || undefined,
         vouchersIds: appliedVoucher ? [appliedVoucher.id] : undefined,
+        payment: paymentRequired
+          ? {
+              paymentId: Number(data.payment_id),
+              required: true,
+              amount: toNumber(data.required_payment_amount),
+              percentage: data.payment_percentage ?? null,
+              gateway: data.payment_gateway ?? null,
+              acceptedMethods: normalizePaymentMethods(data.accepted_payment_methods),
+              appointmentStatus: data.appointment_status,
+              reservationExpiresAt: data.reservation_expires_at ?? data.reserva_expira_em ?? null,
+            }
+          : null,
       };
       onBookingComplete(newAppointment, appliedVoucher);
     } catch (err) {
@@ -188,10 +290,13 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
             <p className="theme-text-secondary mt-1 text-sm">
               {moment(selectedDate).format('dddd, DD [de] MMMM [de] YYYY')} às {selectedTimeSlotData.time}
             </p>
+            {isLessonBooking && selectedLessonType ? (
+              <p className="theme-text-secondary mt-1 text-sm">{selectedLessonType.nome}</p>
+            ) : null}
             <div className="mt-2">
               {appliedVoucher ? (
                 <div className="flex items-center gap-2">
-                  <span className="theme-text-muted line-through">R$ {selectedTimeSlotData.default_value.toFixed(2)}</span>
+                  <span className="theme-text-muted line-through">R$ {basePrice.toFixed(2)}</span>
                   <span className="theme-text-success text-lg font-medium">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               ) : (

@@ -30,8 +30,42 @@ export interface Professional {
   usuario: {
     id: number;
     nome: string;
-    img: string;
+    img?: string | null;
   };
+}
+
+export interface AvailableTeacher extends Professional {
+  cliente_id: number;
+  usuario_id: number;
+  available: boolean;
+  precos_tipos_aula: TeacherLessonTypePrice[];
+  esportes: Array<{
+    id: number;
+    nome: string;
+    esporte_nome?: string | null;
+  }>;
+}
+
+export interface TeacherLessonTypePrice {
+  id: number;
+  cliente_aula_tipo_id: number;
+  tipo_aula_nome?: string | null;
+  valor: number;
+  valor_fixo: number;
+}
+
+export interface LessonTypeSport {
+  id: number;
+  nome: string;
+  esporte_nome?: string | null;
+}
+
+export interface LessonType {
+  id: number;
+  cliente_id: number;
+  nome: string;
+  descricao: string;
+  esportes: LessonTypeSport[];
 }
 
 export interface Service {
@@ -68,6 +102,7 @@ export interface TimeSlot {
   only_at_home: boolean;
   enable_fixed_scheduling: boolean;
   fixed_type: string;
+  permite_agendamento_aula?: boolean;
   have_promotion: boolean;
   availableProfessionals: number[];
   active: boolean;
@@ -142,12 +177,14 @@ export interface User {
 
 export interface Appointment {
   id?: string;
+  ids?: number[];
   serviceId: string;
   date: string;
   timeSlot: string;
   customerName: string;
   customerEmail: string;
   isRecurring?: boolean;
+  isLessonBooking?: boolean;
   recurringType?: 'weekly' | 'monthly';
   isAtHome?: boolean;
   address?: string;
@@ -155,6 +192,46 @@ export interface Appointment {
   sportId?: number;
   pet_id?: number;
   vouchersIds?: number[];
+  payment?: AppointmentPaymentRequirement | null;
+}
+
+export type AppointmentPaymentMethod = 'pix' | 'cartao';
+
+export interface AppointmentPaymentRequirement {
+  paymentId: number;
+  required: boolean;
+  amount: number | null;
+  percentage?: number | null;
+  gateway?: 'asaas' | 'pagbank' | string | null;
+  acceptedMethods: AppointmentPaymentMethod[];
+  appointmentStatus?: 'reserved' | 'awaiting_payment' | 'confirmed' | 'expired' | 'cancelled' | string;
+  reservationExpiresAt?: string | null;
+}
+
+export interface AppointmentPixPayment {
+  qrCodeId?: string | null;
+  copyPasteCode?: string | null;
+  encodedImage?: string | null;
+  gatewayReferenceId?: string | null;
+  gatewayOrderId?: string | null;
+  gatewayChargeId?: string | null;
+  raw?: Record<string, unknown> | null;
+}
+
+export interface AppointmentPaymentResult {
+  id: number;
+  externalId?: string | null;
+  gateway?: string | null;
+  paymentStatus?: string | null;
+  amount: number | null;
+  appointmentId?: number | null;
+  appointmentIds?: number[];
+  appointmentStatus?: string | null;
+  paymentRequired?: boolean;
+  requiredPaymentAmount?: number | null;
+  reservationExpiresAt?: string | null;
+  expiresAt?: string | null;
+  pixPayment?: AppointmentPixPayment | null;
 }
 
 export interface BookingStep {

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { TimeSlot } from '../types';
-import { AlertCircle, Bell, CheckCircle2, Clock } from 'lucide-react';
+import { AlertCircle, Bell, BookOpen, CheckCircle2, Clock } from 'lucide-react';
 
 interface TimeSlotPickerProps {
   timeSlots: TimeSlot[];
@@ -186,6 +186,11 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                         <span className="inline-flex items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--color-primary)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_14%,transparent)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-primary)]">
                           <AlertCircle size={12} />
                           Ocupado
+                        </span>
+                      ) : slot.permite_agendamento_aula ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--color-primary)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_14%,transparent)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-primary)]">
+                          <BookOpen size={12} />
+                          Aula
                         </span>
                       ) : null}
                     </div>

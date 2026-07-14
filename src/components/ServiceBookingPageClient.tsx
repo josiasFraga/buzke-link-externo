@@ -31,6 +31,7 @@ function normalizeTimeSlot(slot: TimeSlot): TimeSlot {
     occupied_appointment_id: typeof slot.occupied_appointment_id === 'number' ? slot.occupied_appointment_id : undefined,
     occupied_by_fixed: Boolean(slot.occupied_by_fixed),
     occupied_fixed_type: slot.occupied_fixed_type ?? null,
+    permite_agendamento_aula: Boolean(slot.permite_agendamento_aula),
     interest_options: interestOptions
       ? {
           occasional: Boolean(interestOptions.occasional),
