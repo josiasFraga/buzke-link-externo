@@ -1,9 +1,13 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ConfirmationStep from '../ConfirmationStep';
 import useAuthStore from '../../store/authStore';
 import { AppointmentSlots, Service, TimeSlot } from '../../types';
+
+vi.mock('../../lib/public-api', () => ({
+  buildPublicApiUrl: (path: string) => `https://api.test${path}`,
+}));
 
 const baseService: Service = {
   id: '10',
@@ -46,6 +50,8 @@ const baseAppointmentData: AppointmentSlots = {
 
 describe('ConfirmationStep', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
+
     useAuthStore.setState({
       token: 'test-token',
       isAuthenticated: true,
@@ -69,12 +75,14 @@ describe('ConfirmationStep', () => {
       <ConfirmationStep
         selectedService={baseService}
         selectedDate="2026-06-22"
-        selectedTimeSlotData={baseTimeSlot}
+        selectedTimeSlots={[baseTimeSlot]}
         selectedProfessionalId={null}
         selectedProfessionalUserId={null}
         selectedSportId={null}
         selectedSubcategoryId={null}
         selectedPetId={null}
+        selectedLessonType={null}
+        selectedLessonTypePrice={null}
         appointmentData={baseAppointmentData}
         onBookingComplete={() => undefined}
       />
@@ -89,17 +97,63 @@ describe('ConfirmationStep', () => {
       <ConfirmationStep
         selectedService={baseService}
         selectedDate="2026-06-22"
-        selectedTimeSlotData={{ ...baseTimeSlot, enable_fixed_scheduling: false }}
+        selectedTimeSlots={[{ ...baseTimeSlot, enable_fixed_scheduling: false }]}
         selectedProfessionalId={null}
         selectedProfessionalUserId={null}
         selectedSportId={null}
         selectedSubcategoryId={null}
         selectedPetId={null}
+        selectedLessonType={null}
+        selectedLessonTypePrice={null}
         appointmentData={baseAppointmentData}
         onBookingComplete={() => undefined}
       />
     );
 
     expect(screen.queryByRole('heading', { name: /agendamento fixo/i })).not.toBeInTheDocument();
+  });
+
+  it('envia todos os horários selecionados no payload externo', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 123,
+        payment_required: false,
+        accepted_payment_methods: ['pix'],
+      }),
+    } as Response);
+    const onBookingComplete = vi.fn();
+
+    render(
+      <ConfirmationStep
+        selectedService={baseService}
+        selectedDate="2026-06-22"
+        selectedTimeSlots={[baseTimeSlot, { ...baseTimeSlot, time: '11:00', endTime: '12:00', label: '11:00 - 12:00' }]}
+        selectedProfessionalId={null}
+        selectedProfessionalUserId={null}
+        selectedSportId={null}
+        selectedSubcategoryId={null}
+        selectedPetId={null}
+        selectedLessonType={null}
+        selectedLessonTypePrice={null}
+        appointmentData={baseAppointmentData}
+        onBookingComplete={onBookingComplete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /concluir agendamento/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/appointments/create-from-external-link'),
+      expect.objectContaining({ method: 'POST' })
+    ));
+
+    const [, requestInit] = fetchMock.mock.calls[0];
+    const payload = JSON.parse(String((requestInit as RequestInit).body));
+
+    expect(payload.horarios).toHaveLength(2);
+    expect(payload.horario).toBe(payload.horarios[0]);
+    expect(payload.duracao).toBe(baseTimeSlot.duration);
+    expect(payload.valor_final).toBe(200);
   });
 });

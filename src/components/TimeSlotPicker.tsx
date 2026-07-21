@@ -4,8 +4,8 @@ import { AlertCircle, Bell, BookOpen, CheckCircle2, Clock } from 'lucide-react';
 
 interface TimeSlotPickerProps {
   timeSlots: TimeSlot[];
-  selectedTimeSlot: string | null;
-  onSelectTimeSlot: (timeSlotId: string) => void;
+  selectedTimeSlots: TimeSlot[];
+  onToggleTimeSlot: (timeSlotId: string) => void;
   onExpressInterest?: (slot: TimeSlot) => void;
   isLoading?: boolean;
   stickyTitle?: boolean;
@@ -16,8 +16,8 @@ interface TimeSlotPickerProps {
 
 const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ 
   timeSlots, 
-  selectedTimeSlot, 
-  onSelectTimeSlot,
+  selectedTimeSlots,
+  onToggleTimeSlot,
   onExpressInterest,
   isLoading = false,
   stickyTitle = false,
@@ -26,6 +26,38 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   interestLoadingAppointmentId = null,
 }) => {
   const timeSlotRef = useRef<HTMLDivElement>(null);
+
+  const parseTimeToMinutes = (time: string) => {
+    const [hours = '0', minutes = '0'] = time.split(':');
+    const parsedHours = Number(hours);
+    const parsedMinutes = Number(minutes);
+
+    if (!Number.isFinite(parsedHours) || !Number.isFinite(parsedMinutes)) {
+      return 0;
+    }
+
+    return (parsedHours * 60) + parsedMinutes;
+  };
+
+  const getSlotRange = (slot: TimeSlot) => ({
+    start: parseTimeToMinutes(slot.time),
+    end: parseTimeToMinutes(slot.endTime),
+  });
+
+  const slotsOverlap = (slot: TimeSlot, selectedSlot: TimeSlot) => {
+    const slotRange = getSlotRange(slot);
+    const selectedRange = getSlotRange(selectedSlot);
+
+    return slotRange.start < selectedRange.end && selectedRange.start < slotRange.end;
+  };
+
+  const isSlotSelected = (slot: TimeSlot) => selectedTimeSlots.some(
+    (selectedSlot) => selectedSlot.time === slot.time && selectedSlot.duration === slot.duration
+  );
+
+  const hasSelectionConflict = (slot: TimeSlot) => !isSlotSelected(slot) && selectedTimeSlots.some(
+    (selectedSlot) => slotsOverlap(slot, selectedSlot)
+  );
 
   const canExpressInterest = (slot: TimeSlot) => Boolean(
     !slot.active &&
@@ -59,8 +91,8 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   };
 
   const handleSlotClick = (slot: TimeSlot) => {
-    if (slot.active) {
-      onSelectTimeSlot(slot.time);
+    if (slot.active && !hasSelectionConflict(slot)) {
+      onToggleTimeSlot(slot.time);
       return;
     }
 
@@ -71,7 +103,7 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   
   // Scroll to professional selector when time slot is selected
   useEffect(() => {
-    if (selectedTimeSlot && autoScrollOnSelect) {
+    if (selectedTimeSlots.length > 0 && autoScrollOnSelect) {
       setTimeout(() => {
         const modalElement = timeSlotRef.current?.closest('.overflow-y-auto');
         if (modalElement) {
@@ -83,7 +115,7 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
         }
       }, 100); // Small delay to ensure content is rendered
     }
-  }, [autoScrollOnSelect, selectedTimeSlot]);
+  }, [autoScrollOnSelect, selectedTimeSlots.length]);
   
   if (isLoading) {
     return (
@@ -157,7 +189,9 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
               const isLoadingInterest = Boolean(
                 slot.occupied_appointment_id && interestLoadingAppointmentId === slot.occupied_appointment_id
               );
-              const isCommonUnavailable = !slot.active && !isExpressInterestAvailable;
+              const isSelected = isSlotSelected(slot);
+              const isConflicting = hasSelectionConflict(slot);
+              const isCommonUnavailable = (!slot.active && !isExpressInterestAvailable) || isConflicting;
 
               return (
                 <button
@@ -173,7 +207,7 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                         ? 'theme-panel-success border border-[color:color-mix(in_srgb,var(--color-success-text)_22%,transparent)] text-[var(--color-success-text)] cursor-not-allowed'
                         : isExpressInterestAvailable
                           ? 'min-h-[4.5rem] border border-[color:color-mix(in_srgb,var(--color-primary)_42%,var(--color-border))] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-primary)_13%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-primary)_6%,var(--color-surface))_100%)] text-[var(--color-text-primary)] shadow-[var(--shadow-soft)] hover:border-[var(--color-primary)] hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-primary)_18%,var(--color-surface))_0%,color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))_100%)]'
-                          : selectedTimeSlot === slot.time
+                          : isSelected
                             ? 'min-h-[4.25rem] bg-[var(--color-primary)] text-white'
                             : 'bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_14%,transparent)] text-[var(--color-text-primary)]'
                     }
@@ -211,15 +245,15 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                     )}
                     {!isExpressInterestAvailable && !isSubmitted ? (
                       <div className="pt-0.5">
-                        <p className={`text-xs ${selectedTimeSlot === slot.time ? 'text-white/80' : 'theme-text-secondary'}`}>
-                          {slot.active ? 'Disponível agora' : 'Indisponível'}
+                        <p className={`text-xs ${isSelected ? 'text-white/80' : 'theme-text-secondary'}`}>
+                          {isConflicting ? 'Conflita com horário selecionado' : slot.active ? 'Disponível agora' : 'Indisponível'}
                         </p>
                       </div>
                     ) : null}
                   </div>
-                  {isCommonUnavailable && slot.motivo ? (
+                  {isCommonUnavailable && (slot.motivo || isConflicting) ? (
                     <div className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text-primary)] opacity-0 shadow-[var(--shadow-soft)] transition-opacity group-hover:opacity-100">
-                      {slot.motivo}
+                      {isConflicting ? 'Este horário sobrepõe um horário já selecionado.' : slot.motivo}
                     </div>
                   ) : null}
                 </button>

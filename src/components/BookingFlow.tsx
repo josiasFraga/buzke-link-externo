@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BookOpen, Calendar, CalendarCheck, CheckCircle2, Clock3, Sparkles, Trophy, UserRound } from 'lucide-react';
-import { Appointment, AppointmentSlotInterestType, AppointmentSlots, AvailableTeacher, LessonType, Service, TimeSlot, Voucher } from '../types';
+import { Appointment, AppointmentSlotInterestType, AppointmentSlots, AvailableProfessional, AvailableTeacher, LessonType, Professional, Service, TimeSlot, Voucher } from '../types';
 import { getBookingSteps } from '../data/mockData';
 import AuthStep from './AuthStep';
 import BookingConfirmation from './BookingConfirmation';
@@ -24,11 +24,10 @@ import { getServiceImageSources } from '../lib/service-images';
 interface BookingFlowProps {
   selectedService: Service;
   selectedDate: string | null;
-  selectedTimeSlot: string | null;
-  selectedTimeSlotData: TimeSlot | null;
+  selectedTimeSlots: TimeSlot[];
   timeSlots: TimeSlot[];
   onSelectDate: (date: string) => void;
-  onSelectTimeSlot: (timeSlotId: string) => void;
+  onToggleTimeSlot: (timeSlotId: string) => void;
   onDateSelected?: () => void;
   appointmentData: AppointmentSlots | null;
   onRefreshTimeSlots?: () => Promise<void> | void;
@@ -57,6 +56,38 @@ function formatDateForTeacherQuery(date: string) {
 
 function formatTimeForTeacherQuery(time: string) {
   return time.length === 5 ? `${time}:00` : time;
+}
+
+function formatDateTimeForAvailability(date: string, time: string) {
+  return `${formatDateForTeacherQuery(date)} ${formatTimeForTeacherQuery(time)}`;
+}
+
+function appendArrayParam(params: URLSearchParams, key: string, values: string[]) {
+  values.forEach((value) => {
+    params.append(`${key}[]`, value);
+  });
+}
+
+function toAvailableProfessional(professional: AvailableProfessional): Professional & { available: boolean } {
+  return {
+    id: professional.id,
+    available: professional.available,
+    usuario: {
+      id: professional.id,
+      nome: professional.nome,
+      img: professional.img ?? null,
+    },
+  };
+}
+
+function normalizeAvailableProfessionals(data: unknown): Array<Professional & { available: boolean }> {
+  const payload = Array.isArray(data)
+    ? data
+    : data && typeof data === 'object' && Array.isArray((data as { data?: unknown }).data)
+      ? (data as { data: unknown[] }).data
+      : [];
+
+  return payload.map((item) => toAvailableProfessional(item as AvailableProfessional));
 }
 
 function getInterestTypesForSlot(slot: TimeSlot): AppointmentSlotInterestType[] {
@@ -90,14 +121,45 @@ function formatCurrency(value: number) {
   });
 }
 
+function parseDurationToMinutes(duration: string) {
+  const [hours = '0', minutes = '0', seconds = '0'] = duration.split(':');
+  const parsedHours = Number(hours);
+  const parsedMinutes = Number(minutes);
+  const parsedSeconds = Number(seconds);
+
+  if (!Number.isFinite(parsedHours) || !Number.isFinite(parsedMinutes) || !Number.isFinite(parsedSeconds)) {
+    return 0;
+  }
+
+  return (parsedHours * 60) + parsedMinutes + Math.ceil(parsedSeconds / 60);
+}
+
+function formatDurationFromMinutes(totalMinutes: number) {
+  if (totalMinutes <= 0) {
+    return null;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours}h${minutes.toString().padStart(2, '0')}`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+  return `${minutes}min`;
+}
+
 const BookingFlow: React.FC<BookingFlowProps> = ({
   selectedService,
   selectedDate,
-  selectedTimeSlot,
-  selectedTimeSlotData,
+  selectedTimeSlots,
   timeSlots,
   onSelectDate,
-  onSelectTimeSlot,
+  onToggleTimeSlot,
   onDateSelected,
   appointmentData,
   onRefreshTimeSlots,
@@ -122,6 +184,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const [bookingScheduleType, setBookingScheduleType] = useState<BookingScheduleType | null>(null);
   const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
   const [isLoadingLessonTypes, setIsLoadingLessonTypes] = useState(false);
+  const [availableProfessionals, setAvailableProfessionals] = useState<Array<Professional & { available: boolean }>>([]);
+  const [isLoadingAvailableProfessionals, setIsLoadingAvailableProfessionals] = useState(false);
   const [availableLessonTeachers, setAvailableLessonTeachers] = useState<AvailableTeacher[]>([]);
   const [isLoadingLessonTeachers, setIsLoadingLessonTeachers] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,14 +203,17 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   const finalStep = bookingSteps.length + 1;
   const timeSlotsLoaded = timeSlots.length > 0;
   const isLoadingTimeSlots = Boolean(selectedDate && !appointmentData);
-  const selectedTimeSlotTime = selectedTimeSlotData?.time;
-  const selectedSlotAllowsLesson = Boolean(selectedTimeSlotData?.permite_agendamento_aula);
-  const isLessonBooking = selectedSlotAllowsLesson && bookingScheduleType === 'lesson';
-  const canShowNormalBookingFlow = !selectedSlotAllowsLesson || bookingScheduleType === 'normal';
-  const requiresBookingScheduleType = Boolean(selectedTimeSlot && selectedSlotAllowsLesson);
-  const showLessonTypeSelector = Boolean(selectedTimeSlot && selectedSlotAllowsLesson);
-  const showNormalProfessionalSelector = Boolean(selectedTimeSlot && canShowNormalBookingFlow && appointmentData?.tipo === 'Serviço');
-  const showSportSelector = Boolean(selectedTimeSlot && ((canShowNormalBookingFlow && appointmentData?.tipo === 'Quadra') || isLessonBooking));
+  const selectedTimeSlotData = selectedTimeSlots[0] ?? null;
+  const selectedTimeSlot = selectedTimeSlotData?.time ?? null;
+  const hasSelectedTimeSlots = selectedTimeSlots.length > 0;
+  const selectedTimeSlotsKey = selectedTimeSlots.map((slot) => `${slot.time}-${slot.duration}`).join('|');
+  const selectedSlotsAllowLesson = hasSelectedTimeSlots && selectedTimeSlots.every((slot) => Boolean(slot.permite_agendamento_aula));
+  const isLessonBooking = selectedSlotsAllowLesson && bookingScheduleType === 'lesson';
+  const canShowNormalBookingFlow = !selectedSlotsAllowLesson || bookingScheduleType === 'normal';
+  const requiresBookingScheduleType = Boolean(hasSelectedTimeSlots && selectedSlotsAllowLesson);
+  const showLessonTypeSelector = Boolean(hasSelectedTimeSlots && selectedSlotsAllowLesson);
+  const showNormalProfessionalSelector = Boolean(hasSelectedTimeSlots && canShowNormalBookingFlow && appointmentData?.tipo === 'Serviço');
+  const showSportSelector = Boolean(hasSelectedTimeSlots && ((canShowNormalBookingFlow && appointmentData?.tipo === 'Quadra') || isLessonBooking));
   const showLessonClassTypeSelector = Boolean(isLessonBooking && selectedSportId);
   const showLessonTeacherSelector = Boolean(isLessonBooking && selectedSportId && selectedLessonTypeId && selectedTimeSlotData);
   const showProfessionalSelector = showNormalProfessionalSelector || showLessonTeacherSelector;
@@ -158,9 +225,9 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
         return availableLessonTeachers.find((teacher) => teacher.id === selectedProfessionalId) || null;
       }
 
-      return appointmentData?.profissionais?.find((professional) => professional.id === selectedProfessionalId) || null;
+      return availableProfessionals.find((professional) => professional.id === selectedProfessionalId) || null;
     },
-    [appointmentData?.profissionais, availableLessonTeachers, isLessonBooking, selectedProfessionalId]
+    [availableLessonTeachers, availableProfessionals, isLessonBooking, selectedProfessionalId]
   );
   const selectedSport = useMemo(
     () => appointmentData?.subcategorias?.find((sport) => sport.id === selectedSportId) || null,
@@ -179,20 +246,40 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
 
     return selectedTeacher?.precos_tipos_aula?.find((price) => price.cliente_aula_tipo_id === selectedLessonTypeId) || null;
   }, [availableLessonTeachers, isLessonBooking, selectedLessonTypeId, selectedProfessionalId]);
-  const sidebarPriceValue = isLessonBooking ? (selectedLessonTypePrice?.valor ?? null) : selectedService.price;
-  const sidebarPriceLabel = isLessonBooking ? 'Valor da aula' : 'Valor inicial';
+  const sidebarPriceValue = useMemo(() => {
+    if (!hasSelectedTimeSlots) {
+      return isLessonBooking ? (selectedLessonTypePrice?.valor ?? null) : selectedService.price;
+    }
+
+    if (isLessonBooking) {
+      return selectedLessonTypePrice ? selectedTimeSlots.length * selectedLessonTypePrice.valor : null;
+    }
+
+    return selectedTimeSlots.reduce((total, slot) => total + slot.default_value, 0);
+  }, [hasSelectedTimeSlots, isLessonBooking, selectedLessonTypePrice, selectedService.price, selectedTimeSlots]);
+  const sidebarPriceLabel = selectedTimeSlots.length > 1
+    ? 'Valor total'
+    : isLessonBooking
+      ? 'Valor da aula'
+      : 'Valor inicial';
   const sidebarPriceDisplay = sidebarPriceValue && sidebarPriceValue > 0
     ? formatCurrency(sidebarPriceValue)
     : isLessonBooking && selectedLessonType
       ? 'Selecione um professor'
       : 'Consulte';
+  const sidebarDurationDisplay = useMemo(() => {
+    if (!hasSelectedTimeSlots) {
+      return selectedService.duration;
+    }
+
+    const totalMinutes = selectedTimeSlots.reduce(
+      (total, slot) => total + parseDurationToMinutes(slot.duration),
+      0
+    );
+
+    return formatDurationFromMinutes(totalMinutes) || selectedService.duration;
+  }, [hasSelectedTimeSlots, selectedService.duration, selectedTimeSlots]);
   const selectedSubcategoryId = selectedSport?.subcategoria.id ?? null;
-  const availableLessonTeacherUserIds = useMemo(
-    () => availableLessonTeachers
-      .filter((teacher) => teacher.available && (!selectedLessonTypeId || teacher.precos_tipos_aula.some((price) => price.cliente_aula_tipo_id === selectedLessonTypeId)))
-      .map((teacher) => teacher.usuario.id),
-    [availableLessonTeachers, selectedLessonTypeId]
-  );
   const showDesktopSidebar = showSelectionSidebar && bookingStep < finalStep;
   const selectedServiceImages = useMemo(
     () => getServiceImageSources(selectedService.images, theme),
@@ -226,9 +313,11 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     {
       id: 'time',
       label: 'Horario',
-      value: selectedTimeSlot ? `${selectedTimeSlot}${selectedService.duration ? ` • ${selectedService.duration}` : ''}` : 'Selecione um horario',
+      value: selectedTimeSlots.length > 0
+        ? selectedTimeSlots.map((slot) => slot.time).join(', ')
+        : 'Selecione um horario',
       icon: Clock3,
-      ready: Boolean(selectedTimeSlot),
+      ready: hasSelectedTimeSlots,
     },
     ...(isLessonBooking
       ? [{
@@ -350,7 +439,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   }, [interestError, showToast]);
 
   useEffect(() => {
-    if (!selectedTimeSlot) {
+    if (!hasSelectedTimeSlots) {
       return;
     }
 
@@ -375,27 +464,29 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [selectedTimeSlot, showLessonClassTypeSelector, showLessonTypeSelector, showProfessionalSelector, showSportSelector]);
+  }, [hasSelectedTimeSlots, showLessonClassTypeSelector, showLessonTypeSelector, showProfessionalSelector, showSportSelector]);
 
   useEffect(() => {
     setAvailableLessonTeachers([]);
     setIsLoadingLessonTeachers(false);
+    setAvailableProfessionals([]);
+    setIsLoadingAvailableProfessionals(false);
     setLessonTypes([]);
     setIsLoadingLessonTypes(false);
     setSelectedLessonTypeId(null);
 
-    if (!selectedTimeSlotTime) {
+    if (!hasSelectedTimeSlots) {
       setBookingScheduleType(null);
       return;
     }
 
-    if (!selectedSlotAllowsLesson) {
+    if (!selectedSlotsAllowLesson) {
       setBookingScheduleType('normal');
       return;
     }
 
     setBookingScheduleType(null);
-  }, [selectedSlotAllowsLesson, selectedTimeSlotTime]);
+  }, [hasSelectedTimeSlots, selectedSlotsAllowLesson, selectedTimeSlotsKey]);
 
   useEffect(() => {
     if (!isLessonBooking || !selectedSubcategoryId) {
@@ -467,6 +558,80 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
   }, [isLessonBooking, selectedService.companyId, selectedSubcategoryId, token]);
 
   useEffect(() => {
+    if (!showNormalProfessionalSelector || !selectedDate || selectedTimeSlots.length === 0) {
+      setAvailableProfessionals([]);
+      setIsLoadingAvailableProfessionals(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const params = new URLSearchParams({
+      servico_id: selectedService.id,
+      cliente_id: selectedService.companyId,
+    });
+    const selectedDateTimes = selectedTimeSlots.map((slot) => formatDateTimeForAvailability(selectedDate, slot.time));
+    const selectedDurations = selectedTimeSlots.map((slot) => formatTimeForTeacherQuery(slot.duration));
+
+    appendArrayParam(params, 'datas_horarios', selectedDateTimes);
+    appendArrayParam(params, 'duracoes', selectedDurations);
+
+    const headers = token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined;
+
+    setError(null);
+    setIsLoadingAvailableProfessionals(true);
+
+    fetch(buildPublicApiUrl(`/professionals/available?${params.toString()}`), {
+      headers,
+      signal: abortController.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Não foi possível listar os profissionais disponíveis.');
+        }
+
+        return normalizeAvailableProfessionals(data);
+      })
+      .then((professionals) => {
+        setAvailableProfessionals(professionals);
+        setSelectedProfessionalId((currentProfessionalId) => {
+          if (!currentProfessionalId) {
+            return null;
+          }
+
+          const selectedProfessionalStillAvailable = professionals.some(
+            (professional) => professional.id === currentProfessionalId && professional.available
+          );
+
+          return selectedProfessionalStillAvailable ? currentProfessionalId : null;
+        });
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+
+        setAvailableProfessionals([]);
+        setSelectedProfessionalId(null);
+        setError(err instanceof Error ? err.message : 'Não foi possível listar os profissionais disponíveis.');
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoadingAvailableProfessionals(false);
+        }
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedDate, selectedService.companyId, selectedService.id, selectedTimeSlots, selectedTimeSlotsKey, showNormalProfessionalSelector, token]);
+
+  useEffect(() => {
     if (!isLessonBooking || !selectedDate || !selectedSubcategoryId || !selectedLessonTypeId || !selectedTimeSlotData) {
       setAvailableLessonTeachers([]);
       setIsLoadingLessonTeachers(false);
@@ -483,6 +648,11 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
       servico_id: selectedService.id,
       empresa_id: selectedService.companyId,
     });
+    const selectedDateTimes = selectedTimeSlots.map((slot) => formatDateTimeForAvailability(selectedDate, slot.time));
+    const selectedDurations = selectedTimeSlots.map((slot) => formatTimeForTeacherQuery(slot.duration));
+
+    appendArrayParam(params, 'datas_horarios', selectedDateTimes);
+    appendArrayParam(params, 'duracoes', selectedDurations);
 
     const headers = token
       ? {
@@ -542,7 +712,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return () => {
       abortController.abort();
     };
-  }, [isLessonBooking, selectedDate, selectedLessonTypeId, selectedService.companyId, selectedService.id, selectedSubcategoryId, selectedTimeSlotData, token]);
+  }, [isLessonBooking, selectedDate, selectedLessonTypeId, selectedService.companyId, selectedService.id, selectedSubcategoryId, selectedTimeSlotData, selectedTimeSlots, selectedTimeSlotsKey, token]);
 
   const handleDateSelect = (date: string) => {
     setError(null);
@@ -555,6 +725,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setSelectedLessonTypeId(null);
     setLessonTypes([]);
     setAvailableLessonTeachers([]);
+    setAvailableProfessionals([]);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
     onSelectDate(date);
@@ -568,9 +739,10 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     setSelectedLessonTypeId(null);
     setLessonTypes([]);
     setAvailableLessonTeachers([]);
+    setAvailableProfessionals([]);
     setSelectedProfessionalId(null);
     setSelectedSportId(null);
-    onSelectTimeSlot(timeSlotId);
+    onToggleTimeSlot(timeSlotId);
   };
 
   const handleBookingScheduleTypeChange = (type: BookingScheduleType) => {
@@ -809,8 +981,8 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           {selectedDate ? (
             <TimeSlotPicker
               timeSlots={timeSlots}
-              selectedTimeSlot={selectedTimeSlot}
-              onSelectTimeSlot={handleTimeSlotSelect}
+              selectedTimeSlots={selectedTimeSlots}
+              onToggleTimeSlot={handleTimeSlotSelect}
               onExpressInterest={handleExpressInterest}
               isLoading={isLoadingTimeSlots}
               stickyTitle={stickySteps}
@@ -876,23 +1048,22 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           ) : null}
           {showProfessionalSelector && selectedTimeSlotData ? (
             <ProfessionalSelector
-              professionals={isLessonBooking ? availableLessonTeachers : appointmentData?.profissionais || []}
+              professionals={isLessonBooking ? availableLessonTeachers : availableProfessionals}
               selectedProfessionalId={selectedProfessionalId}
               onSelectProfessional={setSelectedProfessionalId}
-              availableProfessionals={isLessonBooking ? availableLessonTeacherUserIds : selectedTimeSlotData.availableProfessionals}
               title={isLessonBooking ? 'Selecione o professor da aula' : 'Selecione o Profissional'}
-              isLoading={isLessonBooking ? isLoadingLessonTeachers : false}
-              emptyMessage="Nenhum professor disponível para esse esporte e horário."
+              isLoading={isLessonBooking ? isLoadingLessonTeachers : isLoadingAvailableProfessionals}
+              emptyMessage={isLessonBooking ? 'Nenhum professor disponível para esse esporte e horário.' : 'Nenhum profissional disponível para os horários selecionados.'}
               stickyTitle={stickySteps}
               stickyTopClassName={stickySectionTopClassName}
             />
           ) : null}
-          {selectedDate && selectedTimeSlot ? (
+          {selectedDate && hasSelectedTimeSlots ? (
             <div className="mt-8" id="booking-continue-section">
               <button
                 type="button"
                 onClick={handleNextStep}
-                disabled={!selectedTimeSlot || (requiresBookingScheduleType && !bookingScheduleType) || (showProfessionalSelector && !selectedProfessionalId) || (showSportSelector && !selectedSportId) || (showLessonClassTypeSelector && !selectedLessonTypeId) || isLoadingLessonTypes || isLoadingLessonTeachers}
+                disabled={!hasSelectedTimeSlots || (requiresBookingScheduleType && !bookingScheduleType) || (showProfessionalSelector && !selectedProfessionalId) || (showSportSelector && !selectedSportId) || (showLessonClassTypeSelector && !selectedLessonTypeId) || isLoadingLessonTypes || isLoadingLessonTeachers}
                 className="theme-primary-btn w-full px-4 py-3 font-medium"
               >
                 Continuar
@@ -931,7 +1102,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
         <ConfirmationStep
           selectedService={selectedService}
           selectedDate={selectedDate!}
-          selectedTimeSlotData={selectedTimeSlotData!}
+          selectedTimeSlots={selectedTimeSlots}
           selectedProfessionalId={selectedProfessionalId}
           selectedProfessionalUserId={selectedProfessional?.usuario.id ?? null}
           selectedSportId={selectedSportId}
@@ -1018,7 +1189,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                 <div className="mt-4 flex items-center justify-between rounded-[1rem] border border-[var(--color-border)] bg-[color:color-mix(in_srgb,var(--color-surface-secondary)_72%,transparent)] px-4 py-3">
                   <div>
                     <p className="theme-text-muted text-xs font-semibold uppercase tracking-[0.14em]">{sidebarPriceLabel}</p>
-                    <p className="theme-text-primary mt-1 text-sm">{selectedService.duration}</p>
+                    <p className="theme-text-primary mt-1 text-sm">{sidebarDurationDisplay}</p>
                   </div>
                   <p className="theme-text-accent text-xl font-bold">{sidebarPriceDisplay}</p>
                 </div>

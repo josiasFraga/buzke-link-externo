@@ -34,6 +34,13 @@ export interface Professional {
   };
 }
 
+export interface AvailableProfessional {
+  id: number;
+  nome: string;
+  img?: string | null;
+  available: boolean;
+}
+
 export interface AvailableTeacher extends Professional {
   cliente_id: number;
   usuario_id: number;
