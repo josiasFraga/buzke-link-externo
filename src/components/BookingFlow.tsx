@@ -1103,7 +1103,6 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           selectedService={selectedService}
           selectedDate={selectedDate!}
           selectedTimeSlots={selectedTimeSlots}
-          selectedProfessionalId={selectedProfessionalId}
           selectedProfessionalUserId={selectedProfessional?.usuario.id ?? null}
           selectedSportId={selectedSportId}
           selectedSubcategoryId={selectedSubcategoryId}
@@ -1111,7 +1110,6 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
           selectedLessonType={selectedLessonType}
           selectedLessonTypePrice={selectedLessonTypePrice}
           isLessonBooking={isLessonBooking}
-          appointmentData={appointmentData}
           onBookingComplete={handleBookingComplete}
         />
       );

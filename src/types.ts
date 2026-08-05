@@ -137,7 +137,7 @@ export interface AppointmentSlots {
   selecao_pet: boolean;
   localidade: string;
   prazo_cancelamento: string;
-  profissionais: Professional[];
+  profissionais?: Professional[];
   subcategorias: Sport[];
   horarios: TimeSlot[];
 }

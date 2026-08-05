@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Appointment, AppointmentPaymentMethod, AppointmentSlots, LessonType, Service, TeacherLessonTypePrice, TimeSlot, Voucher } from '../types';
+import { Appointment, AppointmentPaymentMethod, LessonType, Service, TeacherLessonTypePrice, TimeSlot, Voucher } from '../types';
 import useAuthStore from '../store/authStore';
 import moment from '../utils/moment-pt-br';
 import RecurringOptions from './Forms/RecurringOptions';
@@ -12,7 +12,6 @@ interface ConfirmationStepProps {
   selectedService: Service;
   selectedDate: string;
   selectedTimeSlots: TimeSlot[];
-  selectedProfessionalId: number | null;
   selectedProfessionalUserId: number | null;
   selectedSportId: number | null;
   selectedSubcategoryId: number | null;
@@ -20,7 +19,6 @@ interface ConfirmationStepProps {
   selectedLessonType: LessonType | null;
   selectedLessonTypePrice: TeacherLessonTypePrice | null;
   isLessonBooking?: boolean;
-  appointmentData: AppointmentSlots | null;
   onBookingComplete: (appointment: Appointment, voucher: Voucher | null) => void;
 }
 
@@ -95,7 +93,6 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedService,
   selectedDate,
   selectedTimeSlots,
-  selectedProfessionalId,
   selectedProfessionalUserId,
   selectedSportId,
   selectedSubcategoryId,
@@ -103,7 +100,6 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedLessonType,
   selectedLessonTypePrice,
   isLessonBooking = false,
-  appointmentData,
   onBookingComplete,
 }) => {
   const { user, token } = useAuthStore();
@@ -222,10 +218,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       });
       const appointmentDate = appointmentDates[0];
 
-      const selectedProfessional = appointmentData?.profissionais?.find(
-        prof => prof.id === selectedProfessionalId
-      );
-      const professionalUserId = selectedProfessionalUserId || selectedProfessional?.usuario.id;
+      const professionalUserId = selectedProfessionalUserId ?? null;
 
       const payload: AppointmentCreatePayload = {
         cliente_id: parseInt(selectedService.companyId),

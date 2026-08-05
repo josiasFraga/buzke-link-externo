@@ -76,14 +76,12 @@ describe('ConfirmationStep', () => {
         selectedService={baseService}
         selectedDate="2026-06-22"
         selectedTimeSlots={[baseTimeSlot]}
-        selectedProfessionalId={null}
         selectedProfessionalUserId={null}
         selectedSportId={null}
         selectedSubcategoryId={null}
         selectedPetId={null}
         selectedLessonType={null}
         selectedLessonTypePrice={null}
-        appointmentData={baseAppointmentData}
         onBookingComplete={() => undefined}
       />
     );
@@ -98,14 +96,12 @@ describe('ConfirmationStep', () => {
         selectedService={baseService}
         selectedDate="2026-06-22"
         selectedTimeSlots={[{ ...baseTimeSlot, enable_fixed_scheduling: false }]}
-        selectedProfessionalId={null}
         selectedProfessionalUserId={null}
         selectedSportId={null}
         selectedSubcategoryId={null}
         selectedPetId={null}
         selectedLessonType={null}
         selectedLessonTypePrice={null}
-        appointmentData={baseAppointmentData}
         onBookingComplete={() => undefined}
       />
     );
@@ -129,14 +125,12 @@ describe('ConfirmationStep', () => {
         selectedService={baseService}
         selectedDate="2026-06-22"
         selectedTimeSlots={[baseTimeSlot, { ...baseTimeSlot, time: '11:00', endTime: '12:00', label: '11:00 - 12:00' }]}
-        selectedProfessionalId={null}
         selectedProfessionalUserId={null}
         selectedSportId={null}
         selectedSubcategoryId={null}
         selectedPetId={null}
         selectedLessonType={null}
         selectedLessonTypePrice={null}
-        appointmentData={baseAppointmentData}
         onBookingComplete={onBookingComplete}
       />
     );
