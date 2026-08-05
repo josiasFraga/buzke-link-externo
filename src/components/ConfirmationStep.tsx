@@ -258,6 +258,8 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         serviceId: selectedService.id,
         date: selectedDate,
         timeSlot: selectedTimeSlots.map((slot) => slot.time).join(', '),
+        subtotalPrice: basePrice,
+        totalPrice,
         customerName: user.nome,
         customerEmail: user.email,
         isRecurring,

@@ -188,6 +188,8 @@ export interface Appointment {
   serviceId: string;
   date: string;
   timeSlot: string;
+  subtotalPrice?: number;
+  totalPrice?: number;
   customerName: string;
   customerEmail: string;
   isRecurring?: boolean;
