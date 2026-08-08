@@ -54,8 +54,7 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
   const bookingFlowSectionRef = useRef<HTMLDivElement>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(initialSelectedDate ?? null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [selectedTimeSlotData, setSelectedTimeSlotData] = useState<TimeSlot | null>(null);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<TimeSlot[]>([]);
   const [appointmentData, setAppointmentData] = useState<AppointmentSlots | null>(null);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
@@ -127,23 +126,18 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
           ...data,
           horarios: normalizedTimeSlots,
         });
-        setSelectedTimeSlotData((currentSelectedSlot) => {
-          const currentTime = currentSelectedSlot?.time || selectedTimeSlot;
-
-          if (!currentTime) {
-            return null;
-          }
-
-          return normalizedTimeSlots.find((slot) => slot.time === currentTime) || null;
-        });
+        setSelectedTimeSlots((currentSelectedSlots) => currentSelectedSlots
+          .map((selectedSlot) => normalizedTimeSlots.find((slot) => slot.time === selectedSlot.time && slot.duration === selectedSlot.duration))
+          .filter((slot): slot is TimeSlot => Boolean(slot))
+        );
       })
       .catch((error) => {
         console.error('Error fetching time slots:', error);
         setTimeSlots([]);
         setAppointmentData(null);
-        setSelectedTimeSlotData(null);
+        setSelectedTimeSlots([]);
       });
-  }, [selectedTimeSlot, service.id, service.slug, token]);
+  }, [service.id, service.slug, token]);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -177,15 +171,26 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
     setTimeSlots([]);
-    setSelectedTimeSlot(null);
-    setSelectedTimeSlotData(null);
+    setSelectedTimeSlots([]);
     setAppointmentData(null);
   };
 
-  const handleSelectTimeSlot = (timeSlotId: string) => {
-    setSelectedTimeSlot(timeSlotId);
+  const handleToggleTimeSlot = (timeSlotId: string) => {
     const timeSlotData = timeSlots.find((slot) => slot.time === timeSlotId);
-    setSelectedTimeSlotData(timeSlotData || null);
+
+    if (!timeSlotData) {
+      return;
+    }
+
+    setSelectedTimeSlots((currentSelectedSlots) => {
+      const alreadySelected = currentSelectedSlots.some(
+        (slot) => slot.time === timeSlotData.time && slot.duration === timeSlotData.duration
+      );
+
+      return alreadySelected
+        ? currentSelectedSlots.filter((slot) => !(slot.time === timeSlotData.time && slot.duration === timeSlotData.duration))
+        : [...currentSelectedSlots, timeSlotData];
+    });
   };
 
   const openImageFullscreen = (imageIndex = 0) => {
@@ -332,11 +337,10 @@ function ServiceBookingPageClient({ company, service, initialSelectedDate }: Ser
               key={service.id}
               selectedService={service}
               selectedDate={selectedDate}
-              selectedTimeSlot={selectedTimeSlot}
-              selectedTimeSlotData={selectedTimeSlotData}
+              selectedTimeSlots={selectedTimeSlots}
               timeSlots={timeSlots}
               onSelectDate={handleSelectDate}
-              onSelectTimeSlot={handleSelectTimeSlot}
+              onToggleTimeSlot={handleToggleTimeSlot}
               appointmentData={appointmentData}
               onRefreshTimeSlots={selectedDate ? () => fetchAppointmentData(selectedDate) : undefined}
               showServiceSummary={false}

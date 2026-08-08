@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Appointment, AppointmentPaymentMethod, AppointmentSlots, LessonType, Service, TeacherLessonTypePrice, TimeSlot, Voucher } from '../types';
+import { Appointment, AppointmentPaymentMethod, LessonType, Service, TeacherLessonTypePrice, TimeSlot, Voucher } from '../types';
 import useAuthStore from '../store/authStore';
 import moment from '../utils/moment-pt-br';
 import RecurringOptions from './Forms/RecurringOptions';
@@ -11,8 +11,7 @@ import { buildPublicApiUrl } from '../lib/public-api';
 interface ConfirmationStepProps {
   selectedService: Service;
   selectedDate: string;
-  selectedTimeSlotData: TimeSlot;
-  selectedProfessionalId: number | null;
+  selectedTimeSlots: TimeSlot[];
   selectedProfessionalUserId: number | null;
   selectedSportId: number | null;
   selectedSubcategoryId: number | null;
@@ -20,14 +19,14 @@ interface ConfirmationStepProps {
   selectedLessonType: LessonType | null;
   selectedLessonTypePrice: TeacherLessonTypePrice | null;
   isLessonBooking?: boolean;
-  appointmentData: AppointmentSlots | null;
   onBookingComplete: (appointment: Appointment, voucher: Voucher | null) => void;
 }
 
 interface AppointmentCreatePayload {
   cliente_id: number;
   servico_id: number;
-  horario: string;
+  horario?: string;
+  horarios?: string[];
   duracao: string;
   domicilio: 'Y' | 'N';
   endereco?: string;
@@ -93,8 +92,7 @@ function normalizePaymentMethods(methods: AppointmentCreateResponse['accepted_pa
 const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedService,
   selectedDate,
-  selectedTimeSlotData,
-  selectedProfessionalId,
+  selectedTimeSlots,
   selectedProfessionalUserId,
   selectedSportId,
   selectedSubcategoryId,
@@ -102,10 +100,11 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   selectedLessonType,
   selectedLessonTypePrice,
   isLessonBooking = false,
-  appointmentData,
   onBookingComplete,
 }) => {
   const { user, token } = useAuthStore();
+  const referenceTimeSlot = selectedTimeSlots[0] ?? null;
+  const allSelectedSlotsAllowFixed = selectedTimeSlots.length > 0 && selectedTimeSlots.every((slot) => Boolean(slot.enable_fixed_scheduling));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,20 +120,27 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   const [recurringDuration, setRecurringDuration] = useState('3M');
 
   // At Home State
-  const [isAtHome, setIsAtHome] = useState(selectedTimeSlotData?.only_at_home || false);
+  const [isAtHome, setIsAtHome] = useState(referenceTimeSlot?.only_at_home || false);
   const [address, setAddress] = useState('');
 
   const basePrice = useMemo(() => {
-    if (!isLessonBooking || !selectedLessonType || !selectedLessonTypePrice) {
-      return selectedTimeSlotData.default_value;
+    if (selectedTimeSlots.length === 0) {
+      return 0;
     }
 
-    if (isRecurring) {
-      return selectedLessonTypePrice.valor_fixo;
+    if (isLessonBooking && selectedLessonType && selectedLessonTypePrice) {
+      const lessonSlotPrice = isRecurring
+        ? (selectedLessonTypePrice.valor_fixo || selectedLessonTypePrice.valor)
+        : selectedLessonTypePrice.valor;
+
+      return selectedTimeSlots.reduce((total) => total + lessonSlotPrice, 0);
     }
 
-    return selectedLessonTypePrice.valor;
-  }, [isLessonBooking, isRecurring, selectedLessonType, selectedLessonTypePrice, selectedTimeSlotData.default_value]);
+    return selectedTimeSlots.reduce((total, slot) => {
+      const slotPrice = isRecurring ? (slot.fixed_value ?? slot.default_value) : slot.default_value;
+      return total + slotPrice;
+    }, 0);
+  }, [isLessonBooking, isRecurring, selectedLessonType, selectedLessonTypePrice, selectedTimeSlots]);
 
   const [totalPrice, setTotalPrice] = useState(basePrice);
 
@@ -192,23 +198,34 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
       return;
     }
 
+    if (!referenceTimeSlot || selectedTimeSlots.length === 0) {
+      setError('Selecione pelo menos um horário para continuar.');
+      return;
+    }
+
+    if (isRecurring && !allSelectedSlotsAllowFixed) {
+      setError('Todos os horários selecionados precisam permitir agendamento fixo.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const [hours, minutes] = selectedTimeSlotData.time.split(':');
-      const appointmentDate = moment(selectedDate).hours(parseInt(hours)).minutes(parseInt(minutes)).format();
+      const appointmentDates = selectedTimeSlots.map((slot) => {
+        const [hours, minutes] = slot.time.split(':');
+        return moment(selectedDate).hours(parseInt(hours)).minutes(parseInt(minutes)).format();
+      });
+      const appointmentDate = appointmentDates[0];
 
-      const selectedProfessional = appointmentData?.profissionais?.find(
-        prof => prof.id === selectedProfessionalId
-      );
-      const professionalUserId = selectedProfessionalUserId || selectedProfessional?.usuario.id;
+      const professionalUserId = selectedProfessionalUserId ?? null;
 
       const payload: AppointmentCreatePayload = {
         cliente_id: parseInt(selectedService.companyId),
         servico_id: parseInt(selectedService.id),
         horario: appointmentDate,
-        duracao: selectedTimeSlotData.duration,
+        horarios: appointmentDates,
+        duracao: referenceTimeSlot.duration,
         domicilio: isAtHome ? 'Y' : 'N',
         endereco: isAtHome ? address : undefined,
         ...(isRecurring && {
@@ -240,7 +257,9 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         ids: data.ids,
         serviceId: selectedService.id,
         date: selectedDate,
-        timeSlot: selectedTimeSlotData.time,
+        timeSlot: selectedTimeSlots.map((slot) => slot.time).join(', '),
+        subtotalPrice: basePrice,
+        totalPrice,
         customerName: user.nome,
         customerEmail: user.email,
         isRecurring,
@@ -274,11 +293,11 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
 
   return (
     <div id="confirmation-step-section" className="space-y-6">
-      {selectedTimeSlotData?.enable_fixed_scheduling && (
-        <RecurringOptions isRecurring={isRecurring} recurringDuration={recurringDuration} onRecurringChange={setIsRecurring} onDurationChange={setRecurringDuration} fixedType={selectedTimeSlotData?.fixed_type} />
+      {allSelectedSlotsAllowFixed && referenceTimeSlot && (
+        <RecurringOptions isRecurring={isRecurring} recurringDuration={recurringDuration} onRecurringChange={setIsRecurring} onDurationChange={setRecurringDuration} fixedType={referenceTimeSlot.fixed_type} />
       )}
-      {selectedTimeSlotData?.at_home && (
-        <HomeServiceOptions isAtHome={isAtHome} address={address} onAtHomeChange={setIsAtHome} onAddressChange={setAddress} isRequired={selectedTimeSlotData?.only_at_home} error={!isAtHome && selectedTimeSlotData.only_at_home ? 'Endereço é obrigatório' : ''} />
+      {referenceTimeSlot?.at_home && (
+        <HomeServiceOptions isAtHome={isAtHome} address={address} onAtHomeChange={setIsAtHome} onAddressChange={setAddress} isRequired={referenceTimeSlot.only_at_home} error={!isAtHome && referenceTimeSlot.only_at_home ? 'Endereço é obrigatório' : ''} />
       )}
       <VoucherInput voucherCode={voucherCode} onVoucherCodeChange={setVoucherCode} onApplyVoucher={handleApplyVoucher} isLoading={isApplyingVoucher} error={voucherError} successMessage={voucherSuccessMessage} />
       
@@ -288,7 +307,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
           <div>
             <h4 className="theme-text-primary font-bold">{selectedService.name}</h4>
             <p className="theme-text-secondary mt-1 text-sm">
-              {moment(selectedDate).format('dddd, DD [de] MMMM [de] YYYY')} às {selectedTimeSlotData.time}
+              {moment(selectedDate).format('dddd, DD [de] MMMM [de] YYYY')} às {selectedTimeSlots.map((slot) => slot.time).join(', ')}
             </p>
             {isLessonBooking && selectedLessonType ? (
               <p className="theme-text-secondary mt-1 text-sm">{selectedLessonType.nome}</p>

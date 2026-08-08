@@ -76,7 +76,8 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
     return price;
   };
 
-  const finalPrice = calculateDiscountedPrice(service.price, appliedVoucher);
+  const baseTotalPrice = appointment.subtotalPrice ?? service.price;
+  const finalPrice = appointment.totalPrice ?? calculateDiscountedPrice(baseTotalPrice, appliedVoucher);
 
   return (
     <div className="mt-4 text-center sm:mt-6">
@@ -146,11 +147,11 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
               <span className="theme-text-secondary text-lg font-medium">Total:</span>
               {appliedVoucher ? (
                 <div className="text-right">
-                  <p className="theme-text-muted line-through">R$ {service.price.toFixed(2)}</p>
+                  <p className="theme-text-muted line-through">R$ {baseTotalPrice.toFixed(2)}</p>
                   <p className="theme-text-success text-2xl font-bold">R$ {finalPrice.toFixed(2)}</p>
                 </div>
               ) : (
-                <p className="theme-text-accent text-2xl font-bold">R$ {service.price.toFixed(2)}</p>
+                <p className="theme-text-accent text-2xl font-bold">R$ {finalPrice.toFixed(2)}</p>
               )}
             </div>
           </div>

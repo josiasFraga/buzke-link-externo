@@ -1,11 +1,14 @@
 import React from 'react';
 import { Professional } from '../types';
 
+type SelectableProfessional = Professional & {
+  available?: boolean;
+};
+
 interface ProfessionalSelectorProps {
-  professionals: Professional[];
+  professionals: SelectableProfessional[];
   selectedProfessionalId: number | null;
   onSelectProfessional: (id: number) => void;
-  availableProfessionals?: number[];
   title?: string;
   isLoading?: boolean;
   emptyMessage?: string;
@@ -17,7 +20,6 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
   professionals,
   selectedProfessionalId,
   onSelectProfessional,
-  availableProfessionals = [],
   title = 'Selecione o Profissional',
   isLoading = false,
   emptyMessage = 'Nenhum profissional disponível para este horário.',
@@ -45,7 +47,7 @@ const ProfessionalSelector: React.FC<ProfessionalSelectorProps> = ({
       ) : (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {professionals.map((professional) => {
-          const isAvailable = availableProfessionals.includes(professional.usuario.id);
+          const isAvailable = professional.available !== false;
           
           return (
             <button

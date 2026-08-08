@@ -34,6 +34,13 @@ export interface Professional {
   };
 }
 
+export interface AvailableProfessional {
+  id: number;
+  nome: string;
+  img?: string | null;
+  available: boolean;
+}
+
 export interface AvailableTeacher extends Professional {
   cliente_id: number;
   usuario_id: number;
@@ -130,7 +137,7 @@ export interface AppointmentSlots {
   selecao_pet: boolean;
   localidade: string;
   prazo_cancelamento: string;
-  profissionais: Professional[];
+  profissionais?: Professional[];
   subcategorias: Sport[];
   horarios: TimeSlot[];
 }
@@ -181,6 +188,8 @@ export interface Appointment {
   serviceId: string;
   date: string;
   timeSlot: string;
+  subtotalPrice?: number;
+  totalPrice?: number;
   customerName: string;
   customerEmail: string;
   isRecurring?: boolean;

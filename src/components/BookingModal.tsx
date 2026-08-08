@@ -22,7 +22,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onClose,
   selectedService,
   selectedDate,
-  selectedTimeSlot,
   selectedTimeSlotData,
   timeSlots,
   onSelectDate,
@@ -38,17 +37,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!selectedService) return null;
 
+  const selectedTimeSlots = selectedTimeSlotData ? [selectedTimeSlotData] : [];
+
   return (
     <Modal isOpen={isOpen} onClose={handleCloseAndReset} title="Agendar Compromisso" modalRef={modalRef}>
       <BookingFlow
         key={selectedService.id}
         selectedService={selectedService}
         selectedDate={selectedDate}
-        selectedTimeSlot={selectedTimeSlot}
-        selectedTimeSlotData={selectedTimeSlotData}
+        selectedTimeSlots={selectedTimeSlots}
         timeSlots={timeSlots}
         onSelectDate={onSelectDate}
-        onSelectTimeSlot={onSelectTimeSlot}
+        onToggleTimeSlot={onSelectTimeSlot}
         onDateSelected={onDateSelected}
         appointmentData={appointmentData}
         containerRef={modalRef}
