@@ -266,9 +266,9 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
         isLessonBooking,
         isAtHome,
         address: isAtHome ? address : undefined,
-        professionalId: professionalUserId,
-        sportId: selectedSportId || undefined,
-        pet_id: selectedPetId || undefined,
+        professionalId: selectedProfessionalUserId ?? undefined,
+        sportId: selectedSportId ?? undefined,
+        pet_id: selectedPetId ?? undefined,
         vouchersIds: appliedVoucher ? [appliedVoucher.id] : undefined,
         payment: paymentRequired
           ? {
