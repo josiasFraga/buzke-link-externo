@@ -10,6 +10,7 @@ interface RecurringOptionsProps {
 }
 
 const RECURRING_DURATION_OPTIONS = [
+  { label: "1 Mês", value: "1M" },
   { label: "3 Meses", value: "3M" },
   { label: "6 Meses", value: "6M" },
   { label: "9 Meses", value: "9M" },
