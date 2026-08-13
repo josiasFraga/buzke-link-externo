@@ -117,7 +117,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
   
   // Recurring State
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringDuration, setRecurringDuration] = useState('3M');
+  const [recurringDuration, setRecurringDuration] = useState('1M');
 
   // At Home State
   const [isAtHome, setIsAtHome] = useState(referenceTimeSlot?.only_at_home || false);
